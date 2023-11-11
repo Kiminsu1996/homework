@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="/css/login.css"/>
+        <title>Document</title>
+    </head>
+    
+    <body>
+        <nav id="navBar">
+        </nav>
+      
+        <!-- <h1>Node.js Test</h1>
+        <div>
+        <form action="/get" method="post">
+            <input type="text" name="id" placeholder="아이디">
+            <p><input type="text" name="pwd" placeholder="비밀번호"></p>
+            <P><input type="submit" , value="로그인"></P>
+        </form>
+        <div> -->
+     
+        <script>
+           function createNav(){
+
+            var nav = document.querySelector("nav")
+            var boardTitle = document.createElement("div")
+            boardTitle.id = "title"
+
+            var goHome = document.createElement("a")
+            goHome.href = "http://13.124.75.178:7000/"
+            goHome.innerHTML ="HOME"
+
+            var boardBtn = document.createElement("button")
+            boardBtn.type ="button"
+            boardBtn.innerHTML = "게시판"
+            boardBtn.addEventListener("click",goBoardListEvnet)
+      
+            boardTitle.append(goHome,boardBtn)
+            nav.appendChild(boardTitle)
+
+           
+            var nav = document.querySelector("nav")
+            var loginDiv = document.createElement("div")
+            var loginBtn = document.createElement("button")
+            loginBtn.type = "button"
+            loginBtn.innerHTML ="로그인"
+            loginBtn.addEventListener("click",goLoginEvent)
+
+            loginDiv.appendChild(loginBtn)
+            nav.appendChild(loginDiv)
+            
+        }
+
+        function goLoginEvent(){
+            location.href = "login-page"
+        }
+ 
+        function goBoardListEvnet(){
+            location.href = "jsp/viewPage/boardList.jsp"
+        }    
+
+        window.onload = function() {
+            createNav()
+        }
+
+        </script>
+
+    </body>
+</html>

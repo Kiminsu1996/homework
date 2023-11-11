@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <nav id="navBar">
+    </nav>
+    <main>
+        <h1>게시판</h1>
+        <table>
+            <tr>
+                <td>번호</td>
+                <td>글제목</td>
+                <td>작성자</td>
+            </tr>
+        </table>
+    </main>
+
+    <script>
+        function createNav() {
+            var main = document.querySelector("main")
+            var nav = document.querySelector("nav")
+    
+            var boardTitle = document.createElement("div")
+            boardTitle.id = "title"
+    
+            var goHome = document.createElement("a")
+            goHome.href = "../../index.jsp"
+            goHome.innerHTML = "HOME"
+    
+            var boardBtn = document.createElement("button")
+            boardBtn.type = "button"
+            boardBtn.innerHTML = "게시판"
+            boardBtn.addEventListener("clikc", goBoardListEvent)
+    
+            boardTitle.append(goHome, boardBtn)
+            nav.appendChild(boardTitle)
+    
+            var loginDiv = document.createElement("div")
+            var logoutBtn = document.createElement("button")
+            logoutBtn.type = "button"
+            logoutBtn.innerHTML = "로그아웃"
+            logoutBtn.addEventListener("click", goLogoutEvent)
+
+            var userInfoBtn = document.createElement("button")
+            userInfoBtn.type = "button"
+            userInfoBtn.innerHTML = "개인정보 보기"
+            userInfoBtn.addEventListener("click", goUserInfoEvent)
+
+            var makeBoardDiv = document.createElement("div")
+            var makeBoardBtn = document.createElement("button")
+            makeBoardBtn.innerHTML = "글작성"
+            makeBoardBtn.className = "enter"
+            makeBoardBtn.type = "button"
+            makeBoardBtn.addEventListener("click", makeBoardEvent)
+
+            makeBoardDiv.appendChild(makeBoardBtn)
+            main.appendChild(makeBoardDiv)
+
+            loginDiv.append(logoutBtn, userInfoBtn)
+            nav.appendChild(loginDiv)
+            
+        }
+
+        function createTable() {
+            var userInfo = <%=userInfo%>
+            var idxList = <%=idxList%>
+            var userIdxList = <%=userIdxList%>
+            var table = document.querySelector("table")
+    
+            for (var index = 0; index < idxList.length; index++) {
+                var tr = document.createElement("tr")
+                var number = document.createElement("td")
+                var title = document.createElement("td")
+                var user = document.createElement("td")
+                var boardInfo = document.createElement("a")
+    
+                number.innerHTML = userInfo[0][index]
+                boardInfo.innerHTML = userInfo[1][index]
+                user.innerHTML = userIdxList[index]
+                boardInfo.href = "boardInfo.jsp?idx=" + idxList[index];
+                title.appendChild(boardInfo)
+                tr.append(number, title, user)
+                table.appendChild(tr)
+            }
+        }
+    
+        function goLogoutEvent() {
+            location.href = "../actionPage/logout.jsp"
+        }
+    
+        function goBoardListEvent() {
+            location.href = "boardList.jsp"
+        }
+    
+        function goUserInfoEvent() {
+            location.href = "userInfo.jsp"
+        }
+    
+        function makeBoardEvent() {
+            location.href = "makeBoard.jsp"
+        }
+    
+        window.onload = function() {
+            createNav()
+            createTable()
+        }
+    </script>
+</body>
+</html>

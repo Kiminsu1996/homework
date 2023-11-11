@@ -1,0 +1,133 @@
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../../css/login.css" />
+    <title>Document</title>
+</head>
+    <body>
+        <nav id="navBar">
+        </nav>
+
+        <main>
+        </main>
+
+        <script>
+            function createNav() {
+                var nav = document.querySelector("nav")
+                var boardTitle = document.createElement("div")
+                boardTitle.id = "title"
+
+                var goHome = document.createElement("a")
+                goHome.href = "mainPage"
+                goHome.innerHTML = "HOME"
+
+                var boardBtn = document.createElement("button")
+                boardBtn.type = "button"
+                boardBtn.innerHTML = "게시판"
+                boardBtn.addEventListener("click", goBoardListEvnet)
+
+                var loginDiv = document.createElement("div")
+                var loginBtn = document.createElement("button")
+                loginBtn.type = "button"
+                loginBtn.innerHTML = "로그인"
+                loginBtn.addEventListener("click", goLoginEvent)
+
+                boardTitle.append(goHome, boardBtn)
+                loginDiv.appendChild(loginBtn)
+                nav.append(boardTitle, loginDiv)
+            }
+
+            function createForm() {
+                var form = document.createElement("form")
+                var main = document.querySelector("main")
+                form.id = 'mainForm'
+                form.action = "../actionPage/signupResult.jsp"
+
+                form.innerHTML = `
+                <h1>회원가입</h1>
+                <div class="user id">
+                    <label>아이디</label>
+                    <input id="userId" type="text" placeholder="5~20글자 사이의 ID입력" name="id_value" />
+                </div>
+                <div class="user pw">
+                    <label>비밀번호</label>
+                    <input id="userPw" type="password" placeholder="5~20글자 사이의 PW입력" name="pw_value" />
+                </div>
+                <div class="user name">
+                    <label>이름</label>
+                    <input id="userName" type="text" name="name_value" />
+                </div>
+                <div class="user phoneNumber">
+                    <label>핸드폰번호</label>
+                    <input id="userPhone" type="text"  placeholder="010-XXXX-XXXX"  name="phone_value" />
+                </div>
+                <div class="user email">
+                    <label>이메일</label>
+                    <input id="userEmail" type="text" placeholder="test@eamil.com " name="email_value" />
+                </div>
+                <div class="user address">
+                    <label>주소</label>
+                    <input id="userAddress" type="text" name="address_value" />
+                </div>
+                <button class="enter" type="submit">입력</button>
+                `
+                main.appendChild(form)
+            }
+
+            function checkEmpty() {
+                var button = document.querySelector(".enter")
+                button.addEventListener("click", buttonClickEvent)
+            }
+
+            function buttonClickEvent(e) {
+                var userId = document.getElementById("userId")
+                var userPw = document.getElementById("userPw")
+                var userName = document.getElementById("userName")
+                var userPhone = document.getElementById("userPhone")
+                var userEmail = document.getElementById("userEmail")
+                var userAddress = document.getElementById("userAddress")
+                var idPwPattern = /^[a-zA-Z0-9]{5,20}$/;
+                var phonePattern = /^01[0-9]{1}-[0-9]{3,4}-[0-9]{4}$/;
+                var emailPattern =  /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+                if (userId.value === "" ||
+                    userPw.value === "" ||
+                    userName.value === "" ||
+                    userPhone.value === "" ||
+                    userEmail.value === "" ||
+                    userAddress.value === ""
+                ) {
+                    e.preventDefault();
+                    alert("빈칸 없이 다 적어주세요.")
+                } else if (!idPwPattern.test(userId.value)) {
+                    e.preventDefault();
+                    alert("ID는 영어와 숫자를 사용해주세요.")
+                } else if (!idPwPattern.test(userPw.value)) {
+                    e.preventDefault();
+                    alert("PW는 영어와 숫자를 사용해주세요.")
+                } else if(!phonePattern.test(userPhone.value)){
+                    e.preventDefault();
+                     alert("핸드폰 번호 사이에 - 입력해주세요")
+                }else if(!emailPattern.test(userEmail.value)){
+                    e.preventDefault();
+                    alert("이메일을 제대로 입력해주세요.")
+                }
+            }
+
+            function goLoginEvent() {
+                location.href = "loginPage"
+            }
+
+            function goBoardListEvnet() {
+                location.href = "boardList.jsp"
+            }
+        
+            window.onload = function() {
+                createNav()
+                createForm()
+                checkEmpty()
+            }
+
+        </script>
+    </body>
+

@@ -1,0 +1,97 @@
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="../../css/login.css"/>
+    <title>Document</title>
+</head>
+    <body>
+        <nav id="navBar">
+        </nav>
+
+        <main>
+        </main>
+
+        <script >
+            function createNav(){
+                var nav = document.querySelector("nav")
+                var boardTitle = document.createElement("div")
+                boardTitle.id = "title"
+
+                var goHome = document.createElement("a")
+                goHome.href = "http://13.124.75.178:7000/"
+                goHome.innerHTML ="HOME"
+
+                var boardBtn = document.createElement("button")
+                boardBtn.type ="button"
+                boardBtn.innerHTML = "게시판"
+                boardBtn.addEventListener("click",goBoardList)
+
+                var loginDiv = document.createElement("div")
+                var loginBtn = document.createElement("button")
+                loginBtn.type = "button"
+                loginBtn.innerHTML ="로그인"
+                loginBtn.addEventListener("click",goLogin)
+
+                boardTitle.append(goHome,boardBtn)
+                loginDiv.appendChild(loginBtn)
+                nav.append(boardTitle,loginDiv)
+            }
+
+            function createForm() {
+                var main = document.querySelector("main")
+                var form = document.createElement("form")
+                form.id = 'mainForm'
+                form.action = "/login-page"
+                form.method = "post"
+
+                form.innerHTML = `
+                    <h1>로그인</h1>
+                    <div class="user Id">
+                        <label>아이디</label>
+                        <input id="userId" type="text" name="id_value" />
+                    </div>
+                    <div class="user Pw">
+                        <label>비밀번호</label>
+                        <input id="userPw" type="password" name="pw_value" />
+                    </div>
+                    <button class="enter" type="submit">로그인</button>
+                    <div id="footer">
+                        <a href="findId.jsp">아이디찾기</a>
+                        <a href="findPw.jsp">비밀번호 찾기</a>
+                        <a href="signup-page">회원가입</a>
+                    </div>
+                    `
+                main.appendChild(form)
+            }
+
+            function checkEmpty(){
+                var button = document.querySelector(".enter")
+                button.addEventListener("click",buttonClickEvent)
+            }
+
+            function buttonClickEvent(e){
+                var userId = document.getElementById("userId")
+                var userPw = document.getElementById("userPw")
+
+                if(userId.value === "" || userPw.value === ""){
+                    e.preventDefault();
+                    alert("빈칸 없이 다 적어주세요.")
+                }
+            }
+
+
+            function goLogin(){
+                location.href = "login-page"
+            }
+
+            function goBoardList(){
+                location.href = "boardList.jsp"
+            }    
+
+            window.onload = function() {
+                createNav()
+                createForm()
+                checkEmpty()
+            }
+        </script>
+    </body>

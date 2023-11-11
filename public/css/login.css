@@ -1,0 +1,58 @@
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+  
+  button {
+    width: 250px;
+    height: 30px;
+  
+    background-color: white;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  
+  a {
+    padding: 10px;
+    text-decoration: none;
+    color: black;
+  }
+  h1 {
+    margin-bottom: 40px;
+  }
+  
+  #mainForm {
+    padding-top: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  #navBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: gray;
+    height: 50px;
+  }
+  
+  #title {
+    display: flex;
+    align-items: center;
+  }
+  
+  .enter {
+    margin-top: 20px;
+  }
+  .user{
+    width: 260px;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+  }
+  
