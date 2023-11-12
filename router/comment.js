@@ -38,20 +38,21 @@ commentRouter.post('/', async (req, res) => {
             throw new Error(" 최소 5글자 입니다. ");
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //게시판 찾기
-        const checkBoardQuery = "SELECT board_idx FROM board WHERE board_idx = ?";
-        const [boardResult] = await pool.query(checkBoardQuery, [boardIdx]);
+        const checkBoardQuery = "SELECT board_idx FROM backend.board WHERE board_idx = $1";
+        const boardResult = await pool.query(checkBoardQuery, [boardIdx]);
+        const row = boardResult.rows
 
-        if (boardResult.length === 0) {
+        if ( row.length === 0) {
             result.message = "게시판을 찾을 수 없습니다.";
         }
 
-        if(boardResult.length > 0){
+        if( row.length > 0){
 
             //댓글 작성
-            const sql = "INSERT INTO comment (board_idx,idx,content) VALUES (?,?,?)";
+            const sql = "INSERT INTO backend.comment (board_idx,idx,content) VALUES ($1, $2, $3)";
             const data = [boardIdx, userIdx, text];
             await pool.query(sql, data); 
 
@@ -65,7 +66,7 @@ commentRouter.post('/', async (req, res) => {
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -103,21 +104,22 @@ commentRouter.get('/:board_idx', async (req, res) => {
             throw new Error( " 해당 게시글이 없습니다. " );
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //게시판 댓글 보기 (id,내용)
-        const sql = `SELECT information.id, comment.content
-                     FROM comment
-                     JOIN information ON information.idx = comment.idx
-                     WHERE comment.board_idx = ?  `;
+        const sql = `SELECT backend.comment.cmt_idx, backend.comment.board_idx, backend.information.id, backend.comment.content
+                     FROM backend.comment
+                     JOIN backend.information ON backend.information.idx = backend.comment.idx
+                     WHERE backend.comment.board_idx = $1  `;
 
         const data = [boardIdx];
-        const [comments] = await pool.query(sql, data);
+        const comments = await pool.query(sql, data);
+        const row = comments.rows
 
-        if(comments.length > 0){
+        if( row.length > 0){
 
-            result.message = true;
-            result.data = comments;
+            result.success = true;
+            result.data = row;
 
         }
 
@@ -128,7 +130,7 @@ commentRouter.get('/:board_idx', async (req, res) => {
     } finally { 
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -178,23 +180,24 @@ commentRouter.put('/', async (req, res) => {
             throw new Error(" 최소 5글자 입니다. ");
         }
         
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         // 댓글 찾기
-        const sql = "SELECT * FROM comment WHERE cmt_idx = ? AND board_idx = ? AND idx = ?";
+        const sql = "SELECT * FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3";
         const data = [commentIdx, boardIdx, userIdx];
-        const [comment] = await pool.query(sql, data);
+        const comment = await pool.query(sql, data);
+        const row = comment.rows
 
-        if(comment.length === 0){
+        if( row.length === 0){
 
             result.message = " 댓글을 찾을 수 없습니다. ";
             
         }
         
         //댓글 업데이트
-        if(comment.length > 0){
+        if( row.length > 0){
             
-            const updateSql = "UPDATE comment SET content = ? WHERE cmt_idx = ? AND board_idx =? AND idx = ? ";
+            const updateSql = "UPDATE backend.comment SET content = $1 WHERE cmt_idx = $2 AND board_idx = $3 AND idx = $4 ";
             await pool.query(updateSql, [text, commentIdx, boardIdx, userIdx]);
     
             result.success = true;
@@ -209,7 +212,7 @@ commentRouter.put('/', async (req, res) => {
     } finally { 
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -246,23 +249,24 @@ commentRouter.delete('/', async (req, res) => {
         }
 
         
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //댓글찾기
-        const sql = "SELECT * FROM comment WHERE cmt_idx = ? AND board_idx = ? AND idx = ?";
+        const sql = "SELECT * FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3 ";
         const data = [commentIdx, boardIdx, userIdx];
-        const [comment] = await pool.query(sql, data);
+        const comment = await pool.query(sql, data);
+        const row = comment.rows
 
-        if(comment.length === 0){
+        if( row.length === 0){
 
             result.message = " 댓글을 찾을 수 없습니다. ";
             
         }
         
         //댓글 삭제 
-        if(comment.length > 0){
+        if( row.length > 0){
             
-            const updateSql = "DELETE FROM comment WHERE cmt_idx = ? AND board_idx =? AND idx = ? ";
+            const updateSql = "DELETE FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3 ";
             await pool.query(updateSql, [commentIdx, boardIdx, userIdx]);
     
             result.success = true;
@@ -276,7 +280,7 @@ commentRouter.delete('/', async (req, res) => {
     }finally {
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);

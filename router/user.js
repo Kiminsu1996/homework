@@ -57,23 +57,25 @@ userRouter.post('/', async  (req, res) => {
         }
             
          
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         // 아이디 중복체크
-        const checkId = "SELECT id FROM information WHERE id = ?";
-        const [findSameId] = await pool.query(checkId, [id]);
+        const checkId = "SELECT id FROM backend.information WHERE id = $1";
+        const findSameId = await pool.query(checkId, [id]);
         
-        if(findSameId.length > 0){
+        const row = findSameId.rows
+
+        if(row.length > 0){
 
             result.message = "중복된 아이디 입니다.";
 
         }
         
         //회원가입
-        if(findSameId.length < 1){
+        if(row.length < 1){
 
-            const sql = 'INSERT INTO information (id, password, name, phonenumber, email, address) VALUES(?,?,?,?,?,?)';
-            const data = [id, password, name, phonenumber, email, address];
+            const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address) VALUES($1, $2, $3, $4, $5, $6)';
+            const data = [id, password, name, email, phonenumber, address];
     
             await pool.query(sql,data);
     
@@ -89,7 +91,7 @@ userRouter.post('/', async  (req, res) => {
     }finally{
 
         if (conn){   // 여기에 if문을 넣은 이유는 위에 conn = await pool.getConnection(); << 이 코드에서 conn이 null 값으로 DB통신에서 문제가 생기면  if문을 통해서 오류를 확인하고  서버가 다운되지 않게 하기 위함이다.
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -113,7 +115,7 @@ userRouter.post('/login', async (req, res) => {
     try {
         
         //빈 값 체크 
-        if( !id || !password || id === null || password === null){
+        if( !id || !password || id === "" || password === ""){
             throw new Error(" 내용을 입력하세요. ");
         }
     
@@ -126,26 +128,27 @@ userRouter.post('/login', async (req, res) => {
             throw new Error(" 최대 20글자 입니다. ");
         }
         
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //로그인 쿼리문
-        const sql = " SELECT * FROM information WHERE id = ? AND password = ? ";
+        const sql = " SELECT * FROM backend.information WHERE id = $1 AND password = $2 ";
         const data = [id, password];
-        const [user] = await pool.query(sql, data);
+        const user = await pool.query(sql, data);
+        const row = user.rows
 
-        if(user.length < 1){
+        if(row.length < 1){
 
             result.message = " 회원 정보가 없습니다. ";
 
         }
 
-        if(user.length > 0) {
+        if(row.length > 0) {
 
-            const userIdx = user[0].idx;
+            const userIdx = row[0].idx;
     
             req.session.idx = userIdx;
     
-            const userInfo = "SELECT * FROM information WHERE idx = ?";
+            const userInfo = "SELECT * FROM backend.information WHERE idx = $1";
             await pool.query(userInfo, [userIdx]);
     
             result.success = true;
@@ -159,7 +162,7 @@ userRouter.post('/login', async (req, res) => {
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -202,9 +205,8 @@ userRouter.post("/logout", async (req, res) => {
 });
 
 //회원정보 보기
-userRouter.get('/:idx', async (req, res) => { 
+userRouter.get('/', async (req, res) => { 
     
-    const requestIdx  = req.params.idx; 
     let userIdx = req.session.idx
     let conn = null;
 
@@ -216,7 +218,7 @@ userRouter.get('/:idx', async (req, res) => {
     
     try {
     
-        if ( !userIdx || !requestIdx || userIdx === "" || requestIdx === "" ) {
+        if ( !userIdx || userIdx === "" ) {
             throw new Error(" 로그인 해주세요. ");
         }
         
@@ -224,20 +226,21 @@ userRouter.get('/:idx', async (req, res) => {
             userIdx = userIdx.toString();
         }
 
-        if ( userIdx !== requestIdx ){
-            throw new Error(" 접근 권한이 없습니다. ");
-        }
+        // if ( userIdx !== requestIdx ){
+        //     throw new Error(" 접근 권한이 없습니다. ");
+        // }
         
-        conn = await pool.getConnection();
+        conn = await pool.connect();
     
-        const sql = "SELECT * FROM information WHERE idx = ?";
+        const sql = "SELECT * FROM backend.information WHERE idx = $1";
         const data = [userIdx];
-        const [user] = await pool.query(sql, data);
+        const user = await pool.query(sql, data);
+        const row = user.rows
 
-        if(user.length > 0){
+        if(row.length > 0){
 
             result.success = true;
-            result.data = user;
+            result.data = row;
 
         }
         
@@ -248,7 +251,7 @@ userRouter.get('/:idx', async (req, res) => {
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -308,16 +311,17 @@ userRouter.post('/find-id', async (req, res) => {
             throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
         
-        const sql = "SELECT id FROM information WHERE name = ? AND phonenumber = ? AND email = ? ";
+        const sql = "SELECT id FROM backend.information WHERE name = $1 AND phonenumber = $2 AND email = $3 ";
         const data = [name, phonenumber, email];
-        const [userId] = await pool.query(sql, data);
+        const userId = await pool.query(sql, data);
+        const row = userId.rows
 
-        if (userId.length > 0) {
+        if (row.length > 0) {
 
             result.success = true ;
-            result.data = userId;
+            result.data = row;
 
         }
         
@@ -328,7 +332,7 @@ userRouter.post('/find-id', async (req, res) => {
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
         
         res.send(result);
@@ -392,16 +396,17 @@ userRouter.post('/find-pw', async (req, res) => {
             throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
     
-        const sql = "SELECT password FROM information WHERE id = ? AND name = ? AND phonenumber = ? AND email = ? ";
+        const sql = "SELECT password FROM backend.information WHERE id = $1 AND name = $2 AND phonenumber = $3 AND email = $4 ";
         const data = [id, name, phonenumber, email];
-        const [userPw] = await pool.query(sql, data);
-    
-        if(userPw.length > 0){
+        const userPw = await pool.query(sql, data);
+        const row = userPw.rows
+
+        if(row.length > 0){
 
             result.success = true;
-            result.data = userPw;
+            result.data = row;
     
         }
     
@@ -412,7 +417,7 @@ userRouter.post('/find-pw', async (req, res) => {
     } finally { 
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -487,10 +492,10 @@ userRouter.put('/', async (req, res) => {
             throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
         }
     
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //회원정보 수정
-        const updateSql = 'UPDATE information SET id=?, password=?, name=?, phonenumber=?, email=?, address=? WHERE idx=?';
+        const updateSql = 'UPDATE backend.information SET id = $1, password = $2, name = $3, phonenumber = $4, email = $5, address = $6 WHERE idx = $7';
         await pool.query(updateSql, [id, password, name, phonenumber, email, address, userIdx]);
 
         result.success = true;
@@ -529,22 +534,22 @@ userRouter.delete('/', async (req, res) => {
            throw new Error(" 로그인 해주세요. ");
         }
     
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //나의 모든 게시물에 남이 쓴 모든 댓글 지우기
-        const deleteMyBoardCmt = "DELETE FROM comment WHERE board_idx IN (SELECT board_idx FROM board WHERE idx =?)";
+        const deleteMyBoardCmt = "DELETE FROM backend.comment WHERE board_idx IN (SELECT board_idx FROM backend.board WHERE idx = $1)";
         await pool.query(deleteMyBoardCmt, [userIdx]);  
         
         //남의 게시물에 내가 쓴 모든 댓글 지우기
-        const deleteOtherBoardCmt = "DELETE FROM comment WHERE idx=?";
+        const deleteOtherBoardCmt = "DELETE FROM backend.comment WHERE idx = $1";
         await pool.query(deleteOtherBoardCmt, [userIdx]);  
         
         //내가 쓴 게시판 지우기
-        const deleteBoard = "DELETE FROM board WHERE idx=?";
+        const deleteBoard = "DELETE FROM backend.board WHERE idx = $1";
         await pool.query(deleteBoard, [userIdx]);  
         
         //회원 탈퇴
-        const deleteInfo = "DELETE FROM information WHERE idx=?";
+        const deleteInfo = "DELETE FROM backend.information WHERE idx = $1";
         await pool.query(deleteInfo, [userIdx]);  
         
 
@@ -565,7 +570,7 @@ userRouter.delete('/', async (req, res) => {
     } finally { 
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);

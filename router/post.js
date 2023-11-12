@@ -36,16 +36,14 @@ postRouter.post('/', async (req, res) => {
             throw new Error(" 최대 20글자 입니다. ");
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //게시글 작성 
         if( userIdx ){
 
-            const sql = "INSERT INTO board (idx,title,content) VALUES(?,?,?)";
+            const sql = "INSERT INTO backend.board (idx,title,content) VALUES($1, $2, $3)";
             const data = [userIdx, title, text];
-            const [insertResult] = await pool.query(sql, data);
-
-            req.session.board_idx = insertResult.insetId;
+            await pool.query(sql, data);
 
             result.success = true;
 
@@ -58,7 +56,7 @@ postRouter.post('/', async (req, res) => {
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -88,16 +86,17 @@ postRouter.get('/all', async (req, res) => {
             throw new Error( " 로그인 해주세요. " );
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //전체 게시글 보기 
-        const searchAllPost = ` SELECT information.idx, board.board_idx, information.id, board.title 
-                                FROM information 
-                                INNER JOIN board ON information.idx = board.idx ` ;
-        const [allPost] = await pool.query(searchAllPost);
+        const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
+                                FROM backend.information 
+                                INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
+        const allPost = await pool.query(searchAllPost);
+        const row = allPost.rows
 
         result.success = true;
-        result.data = allPost;
+        result.data = row;
         
     } catch (error) {
 
@@ -106,7 +105,7 @@ postRouter.get('/all', async (req, res) => {
     }finally{
 
         if(conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -141,17 +140,17 @@ postRouter.get('/:board_idx', async (req, res) => {
             throw new Error( " 해당 게시글이 없습니다. " );
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //특정 게시글 보기 
-        const searchUserPosts = " SELECT * FROM board WHERE board_idx = ?";
-        const [userPosts] = await pool.query(searchUserPosts, [boardIdx]);
-        
+        const searchUserPosts = " SELECT * FROM backend.board WHERE board_idx = $1";
+        const userPosts = await pool.query(searchUserPosts, [boardIdx]);
+        const row = userPosts.rows
     
-        if( userPosts.length > 0 ){
+        if( row.length > 0 ){
             
             result.success = true;
-            result.data = userPosts;
+            result.data = row;
             
         }
 
@@ -163,7 +162,7 @@ postRouter.get('/:board_idx', async (req, res) => {
     } finally { 
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
@@ -210,22 +209,22 @@ postRouter.put('/', async (req, res) => {
             throw new Error ( " 최대 20글자 입니다. " );
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         
         //게시글 찾기
-        const findPostQuery = "SELECT * FROM board WHERE board_idx = ? AND idx = ?";
-        const [foundPost] = await pool.query(findPostQuery, [board_idx, userIdx]);
-
+        const findPostQuery = "SELECT * FROM backend.board WHERE board_idx = $1 AND idx = $2";
+        const foundPost = await pool.query(findPostQuery, [board_idx, userIdx]);
+        const row = foundPost.rows
         
-        if ( foundPost.length === 0 ) {
+        if ( row.length === 0 ) {
             result.message = " 수정할 게시글을 찾을 수 없습니다. ";
         }
 
         //게시글 수정 
-        if( foundPost.length > 0 ){
+        if( row.length > 0 ){
 
-            const updatePost = "UPDATE board SET title = ? , content = ? WHERE board_idx = ? AND idx = ?"; 
+            const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4"; 
             await pool.query(updatePost, [title, text, board_idx, userIdx]);
     
             result.success = true;
@@ -240,7 +239,7 @@ postRouter.put('/', async (req, res) => {
 
         if (conn){
 
-            conn.release();
+            conn.end();
 
         }
 
@@ -274,25 +273,25 @@ postRouter.delete('/', async (req, res) =>{
             throw new Error ( " 게시글을 찾을 수 없습니다. " );
         }
 
-        conn = await pool.getConnection();
+        conn = await pool.connect();
 
         //게시글 찾기
-        const findPostQuery = "SELECT * FROM board WHERE board_idx = ? AND idx = ?";
-        const [foundPost] = await pool.query(findPostQuery, [board_idx, userIdx]);
-
+        const findPostQuery = "SELECT * FROM backend.board WHERE board_idx = $1 AND idx = $2 ";
+        const foundPost = await pool.query(findPostQuery, [board_idx, userIdx]);
+        const row = foundPost.rows
         
-        if ( foundPost.length === 0 ) {
+        if ( row.length === 0 ) {
             result.message = " 삭제할 게시글을 찾을 수 없습니다. ";
         }
 
        //게시글 삭제
-       if( foundPost.length > 0 ){
+       if( row.length > 0 ){
 
-            const deleteComment = `DELETE FROM comment WHERE board_idx = ?`; 
+            const deleteComment = `DELETE FROM backend.comment WHERE board_idx = $1 `; 
             await pool.query(deleteComment, [board_idx]);
 
             
-            const deletePost = `DELETE FROM board WHERE board_idx = ? AND idx = ?`; 
+            const deletePost = `DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`; 
             await pool.query(deletePost, [board_idx, userIdx]);
 
             result.success = true;
@@ -306,7 +305,7 @@ postRouter.delete('/', async (req, res) =>{
     }finally{
 
         if (conn){
-            conn.release();
+            conn.end();
         }
 
         res.send(result);
