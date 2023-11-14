@@ -1,12 +1,12 @@
 const commentRouter = require('express').Router();
+const {comment, userIdx} = require('../middleware/authGuard');
 const pool = require('../database');
 
 
 //댓글 작성
-commentRouter.post('/', async (req, res) => {
+commentRouter.post('/', comment, userIdx, async (req, res) => {
     const {boardIdx, text} = req.body;
-
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
    
     const result = {
@@ -18,24 +18,8 @@ commentRouter.post('/', async (req, res) => {
 
     try {
 
-        if( !userIdx || userIdx === "" ){
-            throw new Error ( " 로그인 해주세요." );
-        }
-        
         if( !boardIdx || boardIdx === "" ){
             throw new Error ( " 게시판을 찾을 수 없습니다. " );
-        }
-
-        if( !text || text === ""){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-
-        if( text.length > 100){
-            throw new Error(" 최대 100글자 입니다. ");
-        }
-
-        if( text.length < 5){
-            throw new Error(" 최소 5글자 입니다. ");
         }
 
         conn = await pool.connect();
@@ -78,9 +62,8 @@ commentRouter.post('/', async (req, res) => {
 
 
 //게시판 댓글 보기
-commentRouter.get('/:board_idx', async (req, res) => { 
+commentRouter.get('/:board_idx', userIdx, async (req, res) => { 
 
-    const userIdx =  req.session.idx;
     const boardIdx = req.params.board_idx;
     let conn = null;
 
@@ -93,12 +76,6 @@ commentRouter.get('/:board_idx', async (req, res) => {
     };
     
     try {
-        
-        //로그인 체크
-        if( !userIdx || userIdx === "" ){
-            throw new Error(" 로그인 해주세요. ");
-        }
-
         //게시판 체크
         if ( !boardIdx || boardIdx === "") {
             throw new Error( " 해당 게시글이 없습니다. " );
@@ -141,10 +118,10 @@ commentRouter.get('/:board_idx', async (req, res) => {
 
 
 //댓글 수정
-commentRouter.put('/', async (req, res) => {
+commentRouter.put('/', comment, userIdx, async (req, res) => {
     
     const {boardIdx, commentIdx, text} = req.body
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -155,29 +132,12 @@ commentRouter.put('/', async (req, res) => {
     };
 
     try {
-        
-        if( !userIdx || userIdx === "" ){
-            throw new Error ( " 로그인 해주세요." );
-        }
-    
         if( !boardIdx || boardIdx === "" ){
             throw new Error ( " 게시판을 찾을 수 없습니다. " );
         }
 
         if( !commentIdx || commentIdx === "" ){
             throw new Error ( " 댓글을 찾을 수 없습니다. " );
-        }
-        
-        if( !text || text === ""){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-    
-        if( text.length > 100){
-            throw new Error(" 최대 100글자 입니다. ");
-        }
-    
-        if( text.length < 5){
-            throw new Error(" 최소 5글자 입니다. ");
         }
         
         conn = await pool.connect();
@@ -223,10 +183,10 @@ commentRouter.put('/', async (req, res) => {
 
 
 //댓글 삭제
-commentRouter.delete('/', async (req, res) => {
+commentRouter.delete('/', userIdx, async (req, res) => {
     
     const {commentIdx, boardIdx} = req.body;
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
     
     const result = {
@@ -235,11 +195,6 @@ commentRouter.delete('/', async (req, res) => {
     };
 
     try {
-
-        if( !userIdx || userIdx === "" ){
-            throw new Error ( " 로그인 해주세요." );
-        }
-    
         if( !boardIdx || boardIdx === "" ){
             throw new Error ( " 게시판을 찾을 수 없습니다. " );
         }

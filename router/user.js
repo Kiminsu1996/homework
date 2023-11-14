@@ -1,9 +1,11 @@
 const userRouter = require('express').Router();
+const {signup, changeUserInfo, login, findId, findPw } = require('../middleware/authGuard');
+const {userIdx} = require('../middleware/authGuard');
 const pool = require('../database');
 
 
 // 회원가입
-userRouter.post('/', async  (req, res) => {
+userRouter.post('/', signup , async  (req, res) => {
     
     const {id, password, name, phonenumber, email, address } = req.body;
     let conn = null;
@@ -14,49 +16,7 @@ userRouter.post('/', async  (req, res) => {
     };
 
     try {
-        
-        // 빈 값 체크
-        if (!id || !password || !name || !phonenumber || !email || !address || 
-            id === "" || password === "" || name === "" || phonenumber === "" || 
-            email === "" || address === "" ) {
-                throw new Error(" 내용을 입력하세요. ");
-            }
-            
-        // 길이 체크 
-        if (id.length < 4 || password.length < 4) {
-            throw new Error("최소 5글자 이상 입력해야 합니다.");
-        }
-        
-        if (name.length < 1) {
-            throw new Error("최소 2글자 이상 입력해야 합니다.");
-        }
-        
-        if (phonenumber.length < 9 || address.length < 9) {
-            throw new Error("최소 10글자 이상 입력해야 합니다.");
-        }
-        
-        if (email.length < 5) {
-            throw new Error("최소 6글자 이상 입력해야 합니다.");
-        }
-        
-        if (id.length > 20 || password.length > 20 || name.length > 20 || phonenumber.length > 20) {
-            throw new Error("최대 20글자 입니다.");
-        }
-        
-        if (email.length > 30 || address.length > 30) {
-            throw new Error("최대 30글자 입니다.");
-        }
-        //핸드폰 번호 형식 체크
-        if (!/^\d{3}-\d{4}-\d{4}$/.test(phonenumber)) {
-            throw new Error(" 올바른 핸드폰 번호 형식이 아닙니다. (예: 010-1234-1234) ");
-        }
-        
-        //이메일 형식 체크
-        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-            throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
-        }
-            
-         
+
         conn = await pool.connect();
 
         // 아이디 중복체크
@@ -86,7 +46,7 @@ userRouter.post('/', async  (req, res) => {
     
     } catch (error) {
 
-        result.message = error.message ;
+        result.message = error.message;
 
     }finally{
 
@@ -101,7 +61,7 @@ userRouter.post('/', async  (req, res) => {
 });
 
 //로그인
-userRouter.post('/login', async (req, res) => {
+userRouter.post('/login', login, async (req, res) => {
 
     const {id, password} = req.body;
     let conn = null;
@@ -113,20 +73,6 @@ userRouter.post('/login', async (req, res) => {
 
     
     try {
-        
-        //빈 값 체크 
-        if( !id || !password || id === "" || password === ""){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-    
-        //길이 체크
-        if ( id.length < 4 || password.length < 4 ){
-            throw new Error(" 최소 5글자 이상 입력해야 합니다. ");
-        }
-    
-        if( id.length > 20 || password.length > 20 ){
-            throw new Error(" 최대 20글자 입니다. ");
-        }
         
         conn = await pool.connect();
 
@@ -205,9 +151,9 @@ userRouter.post("/logout", async (req, res) => {
 });
 
 //회원정보 보기
-userRouter.get('/', async (req, res) => { 
+userRouter.get('/',userIdx, async (req, res) => { 
     
-    let userIdx = req.session.idx
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -218,18 +164,6 @@ userRouter.get('/', async (req, res) => {
     
     try {
     
-        if ( !userIdx || userIdx === "" ) {
-            throw new Error(" 로그인 해주세요. ");
-        }
-        
-        if( userIdx ){
-            userIdx = userIdx.toString();
-        }
-
-        // if ( userIdx !== requestIdx ){
-        //     throw new Error(" 접근 권한이 없습니다. ");
-        // }
-        
         conn = await pool.connect();
     
         const sql = "SELECT * FROM backend.information WHERE idx = $1";
@@ -262,7 +196,7 @@ userRouter.get('/', async (req, res) => {
 
 
 //아이디 찾기
-userRouter.post('/find-id', async (req, res) => {
+userRouter.post('/find-id', findId, async (req, res) => {
     
     const {name, phonenumber, email} = req.body;
     let conn = null;
@@ -274,42 +208,6 @@ userRouter.post('/find-id', async (req, res) => {
     };
 
     try {
-
-        //빈 값 체크 
-        if( !name || !phonenumber || !email || name === "" || phonenumber === "" || email === "" ){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-        
-        //길이 체크 
-        if ( name.length < 1 ){
-            throw new Error(" 최소 2글자 이상 입력해야 합니다. ");
-        }
-
-        if( phonenumber.length < 9){
-            throw new Error(" 최소 10글자 이상 입력해야 합니다. ");
-        }
-
-        if( email.length < 5 ){
-            throw new Error(" 최소 6글자 이상 입력해야 합니다. ");
-        }
-
-        if( name.length > 20 || phonenumber.length > 20 ){
-            throw new Error(" 최대 20글자 입니다. ");
-        }
-
-        if( email.length > 30 ){
-            throw new Error(" 최대 30글자 입니다. ");
-        }
-
-        //핸드폰 번호 형식 체크
-        if (!/^\d{3}-\d{4}-\d{4}$/.test(phonenumber)) {
-            throw new Error(" 올바른 핸드폰 번호 형식이 아닙니다. (예: 010-1234-1234) ");
-        }
-        
-        //이메일 형식 체크 
-        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-            throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
-        }
 
         conn = await pool.connect();
         
@@ -343,7 +241,7 @@ userRouter.post('/find-id', async (req, res) => {
 
 
 //비밀번호 찾기
-userRouter.post('/find-pw', async (req, res) => {
+userRouter.post('/find-pw', findPw, async (req, res) => {
 
     const {id, name, phonenumber, email} = req.body;
     let conn = null;
@@ -356,46 +254,6 @@ userRouter.post('/find-pw', async (req, res) => {
 
     
     try {
-        // 빈 값 체크 
-        if ( !id || !name || !phonenumber || !email || id === "" || name === "" || phonenumber === "" || email === ""){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-    
-        // 길이 체크     
-        if ( id.length < 4 ){
-            throw new Error(" 최소 5글자 이상 입력해야 합니다. ");
-        }
-    
-        if ( name.length < 1 ){
-            throw new Error(" 최소 2글자 이상 입력해야 합니다. ");
-        }
-    
-        if( phonenumber.length < 9){
-            throw new Error(" 최소 10글자 이상 입력해야 합니다. ");
-        }
-    
-        if( email.length < 5 ){
-            throw new Error(" 최소 6글자 이상 입력해야 합니다. ");
-        }
-    
-        if ( id.length > 20 ||  name.length > 20 || phonenumber.length > 20 ){
-            throw new Error(" 최대 20글자 입니다. ");
-        }
-    
-        if ( email.length > 30 ){
-            throw new Error(" 최대 30글자 입니다. ");
-        }
-    
-        //핸드폰 번호 형식 체크
-        if (!/^\d{3}-\d{4}-\d{4}$/.test(phonenumber)) {
-            throw new Error(" 올바른 핸드폰 번호 형식이 아닙니다. (예: 010-1234-1234) ");
-        }
-        
-        //이메일 형식 체크 
-        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-            throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
-        }
-
         conn = await pool.connect();
     
         const sql = "SELECT password FROM backend.information WHERE id = $1 AND name = $2 AND phonenumber = $3 AND email = $4 ";
@@ -427,10 +285,10 @@ userRouter.post('/find-pw', async (req, res) => {
 
 
 //회원정보 수정
-userRouter.put('/', async (req, res) => {
+userRouter.put('/',changeUserInfo,userIdx, async (req, res) => {
 
     const {id, password, name, phonenumber, email, address} = req.body;
-    let userIdx = req.session.idx
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -439,59 +297,6 @@ userRouter.put('/', async (req, res) => {
     };
 
     try {
-
-        if( !userIdx || userIdx === "" ){
-            throw new Error(" 로그인이 필요합니다. ");
-        }
-
-        if( userIdx ){
-            userIdx = userIdx.toString();
-        }
-    
-        // 빈 값 체크 
-        if ( !id || !password || !name || !phonenumber || !email || !address || 
-            id === "" || password === "" || name === "" || phonenumber === "" || 
-            email === "" || address === ""){
-    
-            throw new Error(" 내용을 입력하세요. ");
-    
-        }
-    
-        // 길이 체크 
-        if ( id.length < 4 || password.length < 4 ){
-            throw new Error(" 최소 5글자 이상 입력해야 합니다. ");
-        }
-    
-        if ( name.length < 1 ){
-            throw new Error(" 최소 2글자 이상 입력해야 합니다. ");
-        }
-    
-        if( phonenumber.length < 9 || address.length < 9){
-            throw new Error(" 최소 10글자 이상 입력해야 합니다. ");
-        }
-    
-        if( email.length < 5 ){
-            throw new Error(" 최소 6글자 이상 입력해야 합니다. ");
-        }
-    
-        if ( id.length > 20 || password.length > 20 || name.length > 20 || phonenumber.length > 20 ){
-            throw new Error(" 최대 20글자 입니다. ");
-        }
-    
-        if ( email.length > 30 || address.length > 30 ){
-            throw new Error(" 최대 30글자 입니다. ");
-        }
-    
-        //핸드폰 번호 형식 체크
-        if (!/^\d{3}-\d{4}-\d{4}$/.test(phonenumber)) {
-            throw new Error(" 올바른 핸드폰 번호 형식이 아닙니다. (예: 010-1234-1234) ");
-        }
-        
-        //이메일 형식 체크 
-        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-            throw new Error(" 올바른 이메일 주소 형식이 아닙니다. (예: test@test.com) ");
-        }
-    
         conn = await pool.connect();
 
         //회원정보 수정
@@ -518,9 +323,9 @@ userRouter.put('/', async (req, res) => {
 });
 
 //회원탈퇴
-userRouter.delete('/', async (req, res) => {
+userRouter.delete('/',userIdx, async (req, res) => {
     
-    const userIdx = req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -529,11 +334,6 @@ userRouter.delete('/', async (req, res) => {
     };
 
     try {
-
-        if( !userIdx || userIdx === "" ){
-           throw new Error(" 로그인 해주세요. ");
-        }
-    
         conn = await pool.connect();
 
         //나의 모든 게시물에 남이 쓴 모든 댓글 지우기

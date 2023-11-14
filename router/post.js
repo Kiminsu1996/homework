@@ -1,13 +1,14 @@
 const postRouter = require('express').Router();
+const {board, userIdx} = require('../middleware/authGuard');
 const pool = require('../database');
 
 
 
 //게시글 작성
-postRouter.post('/', async (req, res) => {
+postRouter.post('/', board, userIdx, async (req, res) => {
 
     const { title, text } = req.body;
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -16,26 +17,6 @@ postRouter.post('/', async (req, res) => {
     };
 
     try {
-        
-        //로그인 체크
-        if( !userIdx || userIdx === "" ){
-            throw new Error(" 로그인 해주세요. ");
-        }
-        
-        //빈 값 체크
-        if( !title || !text || title === "" || text === ""){
-            throw new Error(" 내용을 입력하세요. ");
-        }
-    
-        //길이 체크
-        if (title.length < 4  || text.length < 4){
-            throw new Error(" 최소 5글자 이상 입력해야 합니다. ");
-        }
-    
-        if (title.length > 20  || text.length > 20){
-            throw new Error(" 최대 20글자 입니다. ");
-        }
-
         conn = await pool.connect();
 
         //게시글 작성 
@@ -67,9 +48,9 @@ postRouter.post('/', async (req, res) => {
 
 
 //전체 게시글 보기
-postRouter.get('/all', async (req, res) => { 
+postRouter.get('/all', userIdx, async (req, res) => { 
 
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -80,23 +61,21 @@ postRouter.get('/all', async (req, res) => {
 
     
     try {
-        
-        //로그인 체크 
-        if(!userIdx || userIdx === ""){
-            throw new Error( " 로그인 해주세요. " );
-        }
-
         conn = await pool.connect();
 
-        //전체 게시글 보기 
-        const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
-                                FROM backend.information 
-                                INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
-        const allPost = await pool.query(searchAllPost);
-        const row = allPost.rows
+        if(userIdx){
 
-        result.success = true;
-        result.data = row;
+            //전체 게시글 보기 
+            const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
+                                    FROM backend.information 
+                                    INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
+            const allPost = await pool.query(searchAllPost);
+            const row = allPost.rows
+    
+            result.success = true;
+            result.data = row;
+
+        }
         
     } catch (error) {
 
@@ -116,9 +95,8 @@ postRouter.get('/all', async (req, res) => {
 
 
 //특정 게시글 보기
-postRouter.get('/:board_idx', async (req, res) => { 
+postRouter.get('/:board_idx', userIdx, async (req, res) => { 
 
-    const userIdx =  req.session.idx
     const boardIdx  = req.params.board_idx;
     let conn = null;
 
@@ -129,12 +107,7 @@ postRouter.get('/:board_idx', async (req, res) => {
     };
 
     try {
-        
-        //로그인 체크
-        if( !userIdx || userIdx === "" ){
-            throw new Error( " 로그인 해주세요. " );
-        }
-                     
+                  
         //게시판 체크
         if ( !boardIdx || boardIdx === "") {
             throw new Error( " 해당 게시글이 없습니다. " );
@@ -173,10 +146,10 @@ postRouter.get('/:board_idx', async (req, res) => {
 
 
 //게시글 수정 
-postRouter.put('/', async (req, res) => {
+postRouter.put('/', board, userIdx, async (req, res) => {
 
     const{ board_idx, title, text } = req.body;
-    const userIdx =  req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -186,29 +159,11 @@ postRouter.put('/', async (req, res) => {
     
     try {
         
-        //로그인 체크 
-        if( !userIdx || userIdx === "" ){
-            throw new Error ( " 로그인이 필요합니다. ");
-        }
-
         // 빈값체크 
         if( !board_idx || board_idx === "" ){
             throw new Error ( " 게시글을 찾을 수 없습니다. " );
         }
-
-        if ( !title || !text || title === "" || text === "" ){
-            throw new Error ( " 내용을 입력하세요. " );
-        }
-    
-        //길이 체크
-        if ( title.length < 4  || text.length < 4 ){
-            throw new Error ( " 최소 5글자 이상 입력해야 합니다. " );
-        }
-    
-        if ( title.length > 20  || text.length > 20 ){
-            throw new Error ( " 최대 20글자 입니다. " );
-        }
-
+        
         conn = await pool.connect();
 
         
@@ -251,10 +206,10 @@ postRouter.put('/', async (req, res) => {
 
 
 //게시글 삭제
-postRouter.delete('/', async (req, res) =>{
+postRouter.delete('/',userIdx, async (req, res) =>{
 
     const {board_idx} = req.body;
-    const userIdx = req.session.idx;
+    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -263,11 +218,6 @@ postRouter.delete('/', async (req, res) =>{
     };
 
     try {
-         //로그인 체크 
-         if( !userIdx || userIdx === "" ){
-            throw new Error ( " 로그인이 필요합니다. ");
-        }
-
         // 빈값체크 
         if( !board_idx || board_idx === "" ){
             throw new Error ( " 게시글을 찾을 수 없습니다. " );
