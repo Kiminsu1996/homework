@@ -9,7 +9,6 @@ const getUserIdx = (req, res, next) => {
 };
 
 
-
 //user 유효성 검사 
 const validateId = (req, res, next) => {
     const { id } = req.body;
@@ -18,6 +17,7 @@ const validateId = (req, res, next) => {
     }
     next();
 };
+
 
 
 const validatePassword = (req, res, next) => {
@@ -48,6 +48,7 @@ const validatePhoneNumber = (req, res, next) => {
 }
 
 
+
 const validateEmail = (req, res, next) => {
     const { email } = req.body;
     if (!email || !/^.{6,30}$/.test(email) || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
@@ -55,6 +56,7 @@ const validateEmail = (req, res, next) => {
     }
     next();
 };
+
 
 
 const validateAddress = (req, res, next) => {

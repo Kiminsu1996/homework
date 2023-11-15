@@ -16,22 +16,11 @@ app.use(session({
 
 }));
 
- //라우팅 핸들러  페이지도 라우터로 뺀다.
-app.get("/", (req, res) => { 
-    res.sendFile(__dirname + '/public/html/index.html')
-});
-
-
-app.get("/login-page", (req, res) => {
-    res.sendFile(__dirname + '/public/html/login.html')
-});
-
-app.get("/signup-page", (req, res) => {
-    res.sendFile(__dirname + "/public/html/signup.html")
-});
-
 
 // 라우팅 설정
+const pagesApi = require("./router/pages");
+app.use('/', pagesApi);
+
 const userRouter = require("./router/user");
 app.use('/user', userRouter);                             
 
@@ -42,10 +31,19 @@ const commentRouter = require("./router/comment");
 app.use('/comment', commentRouter);
 
 
-// 404 
+// 404
 app.use((req, res) => {
     res.status(404).send("페이지를 찾을 수 없습니다.");
 });
+
+//서버애러 처리 
+app.use((error, req, res, next) => {
+    res.status(error.status || 500).json({
+        success: false,
+        message: error.message
+    });
+});
+
 
 
 //웹서버 시작

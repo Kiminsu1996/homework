@@ -1,6 +1,5 @@
 const userRouter = require('express').Router();
-const {signup, changeUserInfo, login, findId, findPw } = require('../middleware/authGuard');
-const {userIdx} = require('../middleware/authGuard');
+const {signup, changeUserInfo, login, findId, findPw, userIdx } = require('../middleware/authGuard');
 const pool = require('../database');
 
 
