@@ -18,7 +18,7 @@ const validateId = (req, res, next) => {
     next();
 };
 
-
+ 
 
 const validatePassword = (req, res, next) => {
     const { password } = req.body;
@@ -54,6 +54,7 @@ const validateEmail = (req, res, next) => {
     if (!email || !/^.{6,30}$/.test(email) || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
         return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
     }
+
     next();
 };
 
@@ -77,6 +78,7 @@ const validateBoardTitle = (req, res, next) => {
     }
     next();
 };
+
 
 const validateBoardText = (req, res, next) => {
     const { text } = req.body;

@@ -335,22 +335,14 @@ userRouter.delete('/',userIdx, async (req, res) => {
     try {
         conn = await pool.connect();
 
-        //나의 모든 게시물에 남이 쓴 모든 댓글 지우기
-        const deleteMyBoardCmt = "DELETE FROM backend.comment WHERE board_idx IN (SELECT board_idx FROM backend.board WHERE idx = $1)";
-        await pool.query(deleteMyBoardCmt, [userIdx]);  
-        
-        //남의 게시물에 내가 쓴 모든 댓글 지우기
-        const deleteOtherBoardCmt = "DELETE FROM backend.comment WHERE idx = $1";
-        await pool.query(deleteOtherBoardCmt, [userIdx]);  
-        
-        //내가 쓴 게시판 지우기
-        const deleteBoard = "DELETE FROM backend.board WHERE idx = $1";
-        await pool.query(deleteBoard, [userIdx]);  
-        
-        //회원 탈퇴
-        const deleteInfo = "DELETE FROM backend.information WHERE idx = $1";
-        await pool.query(deleteInfo, [userIdx]);  
-        
+        await pool.query('BEGIN');
+
+        await conn.query("DELETE FROM backend.comment WHERE board_idx IN (SELECT board_idx FROM backend.board WHERE idx = $1)", [userIdx]);
+        await conn.query("DELETE FROM backend.comment WHERE idx = $1", [userIdx]);
+        await conn.query("DELETE FROM backend.board WHERE idx = $1", [userIdx]);
+        await conn.query("DELETE FROM backend.information WHERE idx = $1", [userIdx]);
+
+        await pool.query('COMMIT');
 
         req.session.destroy((error) => {
         

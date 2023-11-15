@@ -5,7 +5,6 @@ router.get("/", (req, res) => {
     res.sendFile(path.join(__dirname + '/public/html/index.html'))
 });
 
-
 router.get("/login-page", (req, res) => {
     res.sendFile(path.join(__dirname + '/public/html/login.html'))
 });
