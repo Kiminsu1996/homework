@@ -41,7 +41,7 @@ const validateName = (req, res, next) => {
 
 const validatePhoneNumber = (req, res, next) => {
     const { phonenumber } = req.body;
-    if(!phonenumber || !/^\d{9,20}$/ || !/^010-\d{4}-\d{4}$/.test(phonenumber)){
+    if(!phonenumber || !/^010-\d{4}-\d{4}$/.test(phonenumber)){
         return res.status(400).send({ success : false  , message: " 내용을 적어주세요. " });
     }
     next();
@@ -51,7 +51,7 @@ const validatePhoneNumber = (req, res, next) => {
 
 const validateEmail = (req, res, next) => {
     const { email } = req.body;
-    if (!email || !/^.{6,30}$/.test(email) || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{6,30}$/.test(email)) {
         return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
     }
 
