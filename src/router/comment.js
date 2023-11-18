@@ -1,10 +1,29 @@
 const commentRouter = require('express').Router();
-const {comment, userIdx} = require('../middleware/authGuard');
-const pool = require('../database');
+const {userIdx} = require('../middleware/authGuard');
+const pool = require('../database/databases');
+
+
+const validateText = (req, res, next) => {
+
+    const { text } = req.body;
+    if (!text || !/^.{5,100}$/.test(text)) {
+        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
+    }
+
+    next();
+
+};
+
+const validationMiddlewares = {
+
+    comment : [validateText]
+
+}
+
 
 
 //댓글 작성
-commentRouter.post('/', comment, userIdx, async (req, res) => {
+commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res) => {
     const {boardIdx, text} = req.body;
     const userIdx =  req.userIdx;
     let conn = null;
@@ -24,24 +43,17 @@ commentRouter.post('/', comment, userIdx, async (req, res) => {
 
         conn = await pool.connect();
 
-        //게시판 찾기
-        const checkBoardQuery = "SELECT board_idx FROM backend.board WHERE board_idx = $1";
-        const boardResult = await pool.query(checkBoardQuery, [boardIdx]);
-        const row = boardResult.rows
+        //댓글 작성
+        const sql = "INSERT INTO backend.comment (board_idx,idx,content) VALUES ($1, $2, $3)";
+        const data = [boardIdx, userIdx, text];
+        const makeComment = await pool.query(sql, data); 
 
-        if ( row.length === 0) {
-            result.message = "게시판을 찾을 수 없습니다.";
+        if(makeComment.rowCount < 1){
+            throw new Error (" 댓글 작성 실패 ");
         }
 
-        if( row.length > 0){
-
-            //댓글 작성
-            const sql = "INSERT INTO backend.comment (board_idx,idx,content) VALUES ($1, $2, $3)";
-            const data = [boardIdx, userIdx, text];
-            await pool.query(sql, data); 
-
-            result.success = true;
-        }
+        result.success = true;
+      
         
     } catch (error) {
         
@@ -98,7 +110,13 @@ commentRouter.get('/:board_idx', userIdx, async (req, res) => {
             result.success = true;
             result.data = row;
 
+        }else{
+
+            throw new Error(" 해당 댓글이 없습니다. ");
+
         }
+
+        //성공인데 데이터가 안오는 경우가 있으니깐 그럴땐 메세지로 알려주기 
 
     } catch (error) {
 
@@ -118,7 +136,7 @@ commentRouter.get('/:board_idx', userIdx, async (req, res) => {
 
 
 //댓글 수정
-commentRouter.put('/', comment, userIdx, async (req, res) => {
+commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res) => {
     
     const {boardIdx, commentIdx, text} = req.body
     const userIdx =  req.userIdx;
@@ -143,27 +161,16 @@ commentRouter.put('/', comment, userIdx, async (req, res) => {
         conn = await pool.connect();
 
         // 댓글 찾기
-        const sql = "SELECT * FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3";
-        const data = [commentIdx, boardIdx, userIdx];
-        const comment = await pool.query(sql, data);
-        const row = comment.rows
+        const updateSql = "UPDATE backend.comment SET content = $1 WHERE cmt_idx = $2 AND board_idx = $3 AND idx = $4 ";
+        const updateComment = await pool.query(updateSql, [text, commentIdx, boardIdx, userIdx]);
 
-        if( row.length === 0){
+        if(updateComment.rowCount < 1){
 
-            result.message = " 댓글을 찾을 수 없습니다. ";
-            
-        }
+            throw new Error (" 댓글을 찾을 수 없습니다. ");
         
-        //댓글 업데이트
-        if( row.length > 0){
-            
-            const updateSql = "UPDATE backend.comment SET content = $1 WHERE cmt_idx = $2 AND board_idx = $3 AND idx = $4 ";
-            await pool.query(updateSql, [text, commentIdx, boardIdx, userIdx]);
-    
-            result.success = true;
-
         }
-        
+
+        result.success = true;
 
     } catch (error) {
         
@@ -203,30 +210,19 @@ commentRouter.delete('/', userIdx, async (req, res) => {
             throw new Error ( " 댓글을 찾을 수 없습니다. " );
         }
 
-        
         conn = await pool.connect();
 
-        //댓글찾기
-        const sql = "SELECT * FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3 ";
-        const data = [commentIdx, boardIdx, userIdx];
-        const comment = await pool.query(sql, data);
-        const row = comment.rows
+        const deleteComment = "DELETE FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3 ";
+        const deleteCommentResult = await pool.query(deleteComment, [commentIdx, boardIdx, userIdx]);
 
-        if( row.length === 0){
+        if(deleteCommentResult.rowCount < 1){
 
-            result.message = " 댓글을 찾을 수 없습니다. ";
-            
-        }
-        
-        //댓글 삭제 
-        if( row.length > 0){
-            
-            const updateSql = "DELETE FROM backend.comment WHERE cmt_idx = $1 AND board_idx = $2 AND idx = $3 ";
-            await pool.query(updateSql, [commentIdx, boardIdx, userIdx]);
-    
-            result.success = true;
+            throw new Error (" 삭제할 댓글이 없습니다. ");
 
         }
+
+        result.success = true;
+
 
     } catch (error) {
         

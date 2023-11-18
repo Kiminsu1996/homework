@@ -1,10 +1,81 @@
 const userRouter = require('express').Router();
-const {signup, changeUserInfo, login, findId, findPw, userIdx } = require('../middleware/authGuard');
-const pool = require('../database');
+const { userIdx } = require('../middleware/authGuard');
+const pool = require('../database/databases');
+
+//유효성 검사 
+const validateId = (req, res, next) => {
+    const { id } = req.body;
+    if (!id || !/^.{4,20}$/.test(id)) {
+        return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
+    }
+
+    next();
+
+};
+
+const validatePassword = (req, res, next) => {
+    const { password } = req.body;
+    if (!password || !/^.{4,20}$/.test(password)) {
+        return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
+    }
+
+    next();
+
+};
+
+const validateName = (req, res, next) => {
+    const { name } = req.body;
+    if (!name || !/^[a-zA-Z0-9]{2,20}$/.test(name)) {
+        return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
+    }
+
+    next();
+
+};
+
+const validatePhoneNumber = (req, res, next) => {
+    const { phonenumber } = req.body;
+    if(!phonenumber || !/^010-\d{4}-\d{4}$/.test(phonenumber)){
+        return res.status(400).send({ success : false  , message: " 내용을 적어주세요. " });
+    }
+
+    next();
+
+}
+
+const validateEmail = (req, res, next) => {
+    const { email } = req.body;
+    if (!email || !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email) || email.length > 30 ) {
+        return res.status(400).send({ success: false, message: " 내용을 적어주세요. " });
+    }
+
+    next();
+
+};
+
+const validateAddress = (req, res, next) => {
+    const { address } = req.body;
+    if (!address || !/^.{10,30}$/.test(address)) {
+        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
+    }
+    
+    next();
+
+};
+
+const validationMiddlewares = {
+
+    signup : [validateId, validatePassword, validateName, validatePhoneNumber, validateEmail, validateAddress],
+    changeUserInfo :  [validateId, validatePassword, validateName, validatePhoneNumber, validateEmail, validateAddress],
+    login : [validateId, validatePassword],
+    findId : [validateName, validatePhoneNumber, validateEmail],
+    findPw : [validateId, validateName, validatePhoneNumber, validateEmail]
+
+}
 
 
 // 회원가입
-userRouter.post('/', signup , async  (req, res) => {
+userRouter.post('/', validationMiddlewares.signup , async  (req, res) => {
     
     const {id, password, name, phonenumber, email, address } = req.body;
     let conn = null;
@@ -26,26 +97,21 @@ userRouter.post('/', signup , async  (req, res) => {
 
         if(row.length > 0){
 
-            result.message = "중복된 아이디 입니다.";
+            throw new Error("중복된 아이디 입니다.");
 
         }
         
-        //회원가입
-        if(row.length < 1){
+        const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address) VALUES($1, $2, $3, $4, $5, $6)';
+        const data = [id, password, name, email, phonenumber, address];
 
-            const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address) VALUES($1, $2, $3, $4, $5, $6)';
-            const data = [id, password, name, email, phonenumber, address];
-    
-            await pool.query(sql,data);
-    
-            result.success = true;
+        await pool.query(sql,data);
+
+        result.success = true;
             
-        }
-        
     
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
 
     }finally{
 
@@ -60,7 +126,7 @@ userRouter.post('/', signup , async  (req, res) => {
 });
 
 //로그인
-userRouter.post('/login', login, async (req, res) => {
+userRouter.post('/login', validationMiddlewares.login ,async (req, res) => {
 
     const {id, password} = req.body;
     let conn = null;
@@ -87,22 +153,14 @@ userRouter.post('/login', login, async (req, res) => {
 
         }
 
-        if(row.length > 0) {
-
-            const userIdx = row[0].idx;
-    
-            req.session.idx = userIdx;
-    
-            const userInfo = "SELECT * FROM backend.information WHERE idx = $1";
-            await pool.query(userInfo, [userIdx]);
-    
-            result.success = true;
+        const userIdx = row[0].idx;
+        req.session.idx = userIdx;
         
-        }
-
+        result.success = true;
+        
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
         
     }finally{
 
@@ -139,7 +197,7 @@ userRouter.post("/logout", async (req, res) => {
 
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
         
     }finally{
 
@@ -150,7 +208,7 @@ userRouter.post("/logout", async (req, res) => {
 });
 
 //회원정보 보기
-userRouter.get('/',userIdx, async (req, res) => { 
+userRouter.get('/', userIdx, async (req, res) => { 
     
     const userIdx =  req.userIdx;
     let conn = null;
@@ -170,16 +228,18 @@ userRouter.get('/',userIdx, async (req, res) => {
         const user = await pool.query(sql, data);
         const row = user.rows
 
-        if(row.length > 0){
+        if(row.length < 1){
 
-            result.success = true;
-            result.data = row;
-
+            throw new Error(" 회원 정보 보기 실패 ");
+            
         }
+
+        result.success = true;
+        result.data = row;
         
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
 
     }finally{
 
@@ -195,7 +255,7 @@ userRouter.get('/',userIdx, async (req, res) => {
 
 
 //아이디 찾기
-userRouter.post('/find-id', findId, async (req, res) => {
+userRouter.post('/find-id', validationMiddlewares.findId, async (req, res) => {
     
     const {name, phonenumber, email} = req.body;
     let conn = null;
@@ -215,16 +275,18 @@ userRouter.post('/find-id', findId, async (req, res) => {
         const userId = await pool.query(sql, data);
         const row = userId.rows
 
-        if (row.length > 0) {
+        if (row.length < 1) {
 
-            result.success = true ;
-            result.data = row;
-
+            throw new Error (" 아이디 찾기 실패 ");
+            
         }
+
+        result.success = true ;
+        result.data = row;
         
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
 
     }finally{
 
@@ -240,7 +302,7 @@ userRouter.post('/find-id', findId, async (req, res) => {
 
 
 //비밀번호 찾기
-userRouter.post('/find-pw', findPw, async (req, res) => {
+userRouter.post('/find-pw', validationMiddlewares.findPw, async (req, res) => {
 
     const {id, name, phonenumber, email} = req.body;
     let conn = null;
@@ -260,16 +322,18 @@ userRouter.post('/find-pw', findPw, async (req, res) => {
         const userPw = await pool.query(sql, data);
         const row = userPw.rows
 
-        if(row.length > 0){
+        if(row.length < 1){
 
-            result.success = true;
-            result.data = row;
-    
+            throw new Error (" 비밀번호 찾기 실패 ");
+            
         }
-    
+        
+        result.success = true;
+        result.data = row;
+
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
         
     } finally { 
 
@@ -284,7 +348,7 @@ userRouter.post('/find-pw', findPw, async (req, res) => {
 
 
 //회원정보 수정
-userRouter.put('/',changeUserInfo,userIdx, async (req, res) => {
+userRouter.put('/', validationMiddlewares.changeUserInfo, userIdx, async (req, res) => {
 
     const {id, password, name, phonenumber, email, address} = req.body;
     const userIdx =  req.userIdx;
@@ -300,14 +364,19 @@ userRouter.put('/',changeUserInfo,userIdx, async (req, res) => {
 
         //회원정보 수정
         const updateSql = 'UPDATE backend.information SET id = $1, password = $2, name = $3, phonenumber = $4, email = $5, address = $6 WHERE idx = $7';
-        await pool.query(updateSql, [id, password, name, phonenumber, email, address, userIdx]);
+        const updateResult = await pool.query(updateSql, [id, password, name, phonenumber, email, address, userIdx]);
+
+        if(updateResult.rowCount < 1){
+
+            throw new Error(" 회원 정보 수정 실패 ");
+
+        }
 
         result.success = true;
-        result.message = " 회원 정보 수정 성공 ";
 
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
         
     }finally { 
 
@@ -322,7 +391,7 @@ userRouter.put('/',changeUserInfo,userIdx, async (req, res) => {
 });
 
 //회원탈퇴
-userRouter.delete('/',userIdx, async (req, res) => {
+userRouter.delete('/', userIdx, async (req, res) => {
     
     const userIdx =  req.userIdx;
     let conn = null;
@@ -333,6 +402,7 @@ userRouter.delete('/',userIdx, async (req, res) => {
     };
 
     try {
+
         conn = await pool.connect();
 
         await pool.query('BEGIN');
@@ -340,10 +410,14 @@ userRouter.delete('/',userIdx, async (req, res) => {
         await conn.query("DELETE FROM backend.comment WHERE board_idx IN (SELECT board_idx FROM backend.board WHERE idx = $1)", [userIdx]);
         await conn.query("DELETE FROM backend.comment WHERE idx = $1", [userIdx]);
         await conn.query("DELETE FROM backend.board WHERE idx = $1", [userIdx]);
-        await conn.query("DELETE FROM backend.information WHERE idx = $1", [userIdx]);
+        const deleteUser = await conn.query("DELETE FROM backend.information WHERE idx = $1", [userIdx]);
+
+        if(deleteUser.rowCount < 1){
+            throw new Error(" 회원탈퇴 실패 "); 
+        }
 
         await pool.query('COMMIT');
-
+        
         req.session.destroy((error) => {
         
             if(error){
@@ -356,7 +430,7 @@ userRouter.delete('/',userIdx, async (req, res) => {
 
     } catch (error) {
 
-        result.message = error.message;
+        next(error);
 
     } finally { 
 

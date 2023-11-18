@@ -1,11 +1,37 @@
 const postRouter = require('express').Router();
-const {board, userIdx} = require('../middleware/authGuard');
-const pool = require('../database');
+const {userIdx} = require('../middleware/authGuard');
+const pool = require('../database/databases');
 
 
+//유효성 검사 
+const validateBoardTitle = (req, res, next) => {
+    const { title } = req.body;
+    if (!title || !/^.{5,30}$/.test(title)) {
+        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
+    }
+
+    next();
+
+};
+
+const validateText = (req, res, next) => {
+    const { text } = req.body;
+    if (!text || !/^.{5,100}$/.test(text)) {
+        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
+    }
+
+    next();
+
+};
+
+const validationMiddlewares = {
+
+    board : [validateBoardTitle, validateText ]
+
+}
 
 //게시글 작성
-postRouter.post('/', board, userIdx, async (req, res) => {
+postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res) => {
 
     const { title, text } = req.body;
     const userIdx =  req.userIdx;
@@ -17,18 +43,21 @@ postRouter.post('/', board, userIdx, async (req, res) => {
     };
 
     try {
+
         conn = await pool.connect();
 
         //게시글 작성 
-        if( userIdx ){
+        const sql = "INSERT INTO backend.board (idx,title,content) VALUES($1, $2, $3)";
+        const data = [userIdx, title, text];
+        const makePost = await pool.query(sql, data);
 
-            const sql = "INSERT INTO backend.board (idx,title,content) VALUES($1, $2, $3)";
-            const data = [userIdx, title, text];
-            await pool.query(sql, data);
-
-            result.success = true;
-
+        if(makePost.rowCount < 1){
+            throw new Error (" 게시판 작성 실패 ");
         }
+
+        result.success = true;
+
+        
 
     } catch (error) {
 
@@ -48,9 +77,8 @@ postRouter.post('/', board, userIdx, async (req, res) => {
 
 
 //전체 게시글 보기
-postRouter.get('/all', userIdx, async (req, res) => { 
+postRouter.get('/all', userIdx, async (req, res) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
 
-    const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
@@ -61,21 +89,19 @@ postRouter.get('/all', userIdx, async (req, res) => {
 
     
     try {
+
         conn = await pool.connect();
 
-        if(userIdx){
+        //전체 게시글 보기 
+        const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
+                                FROM backend.information 
+                                INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
+        const allPost = await pool.query(searchAllPost);
+        const row = allPost.rows
 
-            //전체 게시글 보기 
-            const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
-                                    FROM backend.information 
-                                    INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
-            const allPost = await pool.query(searchAllPost);
-            const row = allPost.rows
-    
-            result.success = true;
-            result.data = row;
+        result.success = true;
+        result.data = row;
 
-        }
         
     } catch (error) {
 
@@ -94,7 +120,7 @@ postRouter.get('/all', userIdx, async (req, res) => {
 });
 
 
-//특정 게시글 보기
+//특정 게시글 보기  / !!!!!!!!!!!!로그인 상태 체크하기!!!!!!!!!!!!!!  < 이부분은 미들웨어에서 체크함! userIdx
 postRouter.get('/:board_idx', userIdx, async (req, res) => { 
 
     const boardIdx  = req.params.board_idx;
@@ -119,13 +145,20 @@ postRouter.get('/:board_idx', userIdx, async (req, res) => {
         const searchUserPosts = " SELECT * FROM backend.board WHERE board_idx = $1";
         const userPosts = await pool.query(searchUserPosts, [boardIdx]);
         const row = userPosts.rows
-    
+
         if( row.length > 0 ){
             
             result.success = true;
             result.data = row;
             
+        }else{
+            
+            throw new Error( " 해당 게시글이 없습니다. " );
+
         }
+         
+        //통신은 성공인데 결과가 실패인경우가 이런 경우이기 때문에 
+        //게시글의 board_idx의 값이 없으면 없다고 메세지 보내기
 
 
     } catch (error) {
@@ -146,7 +179,7 @@ postRouter.get('/:board_idx', userIdx, async (req, res) => {
 
 
 //게시글 수정 
-postRouter.put('/', board, userIdx, async (req, res) => {
+postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res) => {
 
     const{ board_idx, title, text } = req.body;
     const userIdx =  req.userIdx;
@@ -166,25 +199,16 @@ postRouter.put('/', board, userIdx, async (req, res) => {
         
         conn = await pool.connect();
 
+        const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4"; 
+        const updatePostResult = await pool.query(updatePost, [title, text, board_idx, userIdx]);
         
-        //게시글 찾기
-        const findPostQuery = "SELECT * FROM backend.board WHERE board_idx = $1 AND idx = $2";
-        const foundPost = await pool.query(findPostQuery, [board_idx, userIdx]);
-        const row = foundPost.rows
+        if(updatePostResult.rowCount < 1){
+            
+            throw new Error(" 게시글을 찾을 수 없습니다. ");
+            
+        }
         
-        if ( row.length === 0 ) {
-            result.message = " 수정할 게시글을 찾을 수 없습니다. ";
-        }
-
-        //게시글 수정 
-        if( row.length > 0 ){
-
-            const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4"; 
-            await pool.query(updatePost, [title, text, board_idx, userIdx]);
-    
-            result.success = true;
-
-        }
+        result.success = true;
 
     } catch (error) {
 
@@ -225,28 +249,20 @@ postRouter.delete('/',userIdx, async (req, res) =>{
 
         conn = await pool.connect();
 
-        //게시글 찾기
-        const findPostQuery = "SELECT * FROM backend.board WHERE board_idx = $1 AND idx = $2 ";
-        const foundPost = await pool.query(findPostQuery, [board_idx, userIdx]);
-        const row = foundPost.rows
-        
-        if ( row.length === 0 ) {
-            result.message = " 삭제할 게시글을 찾을 수 없습니다. ";
-        }
+        await pool.query('BEGIN');
 
-       //게시글 삭제
-       if( row.length > 0 ){
+        await pool.query(`DELETE FROM backend.comment WHERE board_idx = $1 `, [board_idx]);
+        const deleteBoard = await pool.query(`DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`, [board_idx, userIdx]);
 
-            const deleteComment = `DELETE FROM backend.comment WHERE board_idx = $1 `; 
-            await pool.query(deleteComment, [board_idx]);
+        if(deleteBoard.rowCount < 1){
 
-            
-            const deletePost = `DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`; 
-            await pool.query(deletePost, [board_idx, userIdx]);
-
-            result.success = true;
+            throw new Error (" 삭제할 게시글이 없습니다. ");
 
         }
+
+        await pool.query('COMMIT');
+
+        result.success = true;
 
     } catch (error) {
 
