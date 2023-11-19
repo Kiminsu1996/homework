@@ -2,16 +2,13 @@ const postRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
 const pool = require('../database/databases');
 
-
 //유효성 검사 
 const validateBoardTitle = (req, res, next) => {
     const { title } = req.body;
     if (!title || !/^.{5,30}$/.test(title)) {
         return res.status(400).send({ success: false, message: "내용을 적어주세요." });
     }
-
     next();
-
 };
 
 const validateText = (req, res, next) => {
@@ -19,31 +16,25 @@ const validateText = (req, res, next) => {
     if (!text || !/^.{5,100}$/.test(text)) {
         return res.status(400).send({ success: false, message: "내용을 적어주세요." });
     }
-
     next();
-
 };
 
 const validationMiddlewares = {
-
     board : [validateBoardTitle, validateText ]
-
 }
 
 //게시글 작성
-postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res) => {
-
+postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next) => {
     const { title, text } = req.body;
     const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
         "success" : false,
-        "message" : ""
+        "message" : null
     };
 
     try {
-
         conn = await pool.connect();
 
         //게시글 작성 
@@ -52,44 +43,33 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res) => {
         const makePost = await pool.query(sql, data);
 
         if(makePost.rowCount < 1){
-            throw new Error (" 게시판 작성 실패 ");
+            throw new Error ("게시판 작성 실패");
         }
 
         result.success = true;
-
-        
-
     } catch (error) {
-
-        result.message = error.message;
-        
+        return next(error);
     }finally{
-
         if (conn){
             conn.end();
         }
-
-        res.send(result);
-
     }
+    res.send(result);
     
 });
 
-
 //전체 게시글 보기
-postRouter.get('/all', userIdx, async (req, res) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
-
+postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
     let conn = null;
 
     const result = {
         "success" : false,
-        "message" : "",
+        "message" : null,
         "data" : null
     };
 
     
     try {
-
         conn = await pool.connect();
 
         //전체 게시글 보기 
@@ -102,41 +82,32 @@ postRouter.get('/all', userIdx, async (req, res) => {  //여기도 로그인 체
         result.success = true;
         result.data = row;
 
-        
     } catch (error) {
-
-        result.message = error.message;
-
+        return next(error);
     }finally{
-
         if(conn){
             conn.end();
         }
-
-        res.send(result);
-
     }
+    res.send(result);
    
 });
 
-
 //특정 게시글 보기  / !!!!!!!!!!!!로그인 상태 체크하기!!!!!!!!!!!!!!  < 이부분은 미들웨어에서 체크함! userIdx
-postRouter.get('/:board_idx', userIdx, async (req, res) => { 
-
+postRouter.get('/:board_idx', userIdx, async (req, res, next) => { 
     const boardIdx  = req.params.board_idx;
     let conn = null;
 
     const result = {
         "success" : false,
-        "message" : "",
+        "message" : null,
         "data" : null
     };
 
     try {
-                  
         //게시판 체크
         if ( !boardIdx || boardIdx === "") {
-            throw new Error( " 해당 게시글이 없습니다. " );
+            throw new Error("해당 게시글이 없습니다.");
         }
 
         conn = await pool.connect();
@@ -147,137 +118,98 @@ postRouter.get('/:board_idx', userIdx, async (req, res) => {
         const row = userPosts.rows
 
         if( row.length > 0 ){
-            
             result.success = true;
             result.data = row;
-            
         }else{
-            
-            throw new Error( " 해당 게시글이 없습니다. " );
-
+            throw new Error("해당 게시글이 없습니다.");
         }
          
         //통신은 성공인데 결과가 실패인경우가 이런 경우이기 때문에 
         //게시글의 board_idx의 값이 없으면 없다고 메세지 보내기
-
-
     } catch (error) {
-
-        result.message = error.message;
-
+        return next(error);
     } finally { 
-
         if (conn){
             conn.end();
         }
-
-        res.send(result);
-
     }
+    res.send(result);
 
 });
 
-
 //게시글 수정 
-postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res) => {
-
+postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next) => {
     const{ board_idx, title, text } = req.body;
     const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
         "success" : false,
-        "message" : ""
+        "message" : null
     };
     
     try {
-        
         // 빈값체크 
         if( !board_idx || board_idx === "" ){
-            throw new Error ( " 게시글을 찾을 수 없습니다. " );
+            throw new Error ("게시글을 찾을 수 없습니다.");
         }
         
         conn = await pool.connect();
-
         const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4"; 
         const updatePostResult = await pool.query(updatePost, [title, text, board_idx, userIdx]);
         
         if(updatePostResult.rowCount < 1){
-            
-            throw new Error(" 게시글을 찾을 수 없습니다. ");
-            
+            throw new Error("게시글을 찾을 수 없습니다.");
         }
-        
+    
         result.success = true;
 
     } catch (error) {
-
-        result.message = error.message;
-
+        return next(error);
     } finally { 
-
         if (conn){
-
             conn.end();
-
         }
-
-        res.send(result);
-
     }
+    res.send(result);
 
 });
 
-
 //게시글 삭제
-postRouter.delete('/',userIdx, async (req, res) =>{
-
+postRouter.delete('/',userIdx, async (req, res, next) =>{
     const {board_idx} = req.body;
     const userIdx =  req.userIdx;
     let conn = null;
 
     const result = {
         "success" : false,
-        "message" : ""
+        "message" : null
     };
 
     try {
         // 빈값체크 
         if( !board_idx || board_idx === "" ){
-            throw new Error ( " 게시글을 찾을 수 없습니다. " );
+            throw new Error ("게시글을 찾을 수 없습니다.");
         }
 
         conn = await pool.connect();
 
-        await pool.query('BEGIN');
-
-        await pool.query(`DELETE FROM backend.comment WHERE board_idx = $1 `, [board_idx]);
         const deleteBoard = await pool.query(`DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`, [board_idx, userIdx]);
 
         if(deleteBoard.rowCount < 1){
-
-            throw new Error (" 삭제할 게시글이 없습니다. ");
-
+            throw new Error ("삭제할 게시글이 없습니다.");
         }
-
-        await pool.query('COMMIT');
 
         result.success = true;
 
     } catch (error) {
-
-        result.message = error.message;
-
+        return next(error);
     }finally{
-
         if (conn){
             conn.end();
         }
-
-        res.send(result);
-
     }
-
+    res.send(result);
 });
 
 

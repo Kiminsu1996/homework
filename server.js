@@ -15,7 +15,6 @@ app.use(session({
 
 }));
 
-
 // 라우팅 설정
 const pagesApi = require("./src/router/pages");
 app.use('/', pagesApi);
@@ -30,18 +29,15 @@ const commentRouter = require("./src/router/comment");
 app.use('/comment', commentRouter);
 
 
-// // 404
-// app.use((req, res) => {
-//     res.status(404).send("페이지를 찾을 수 없습니다.");
-// });
-
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
-    res.status(error.status).json({   //api를 받아 올 수 있다. 예외처리 중복코드, sql 문법오류 , DB서버 끊는거까지 가능하다 
+    const statusCode = error.status || 500;
+    res.status(statusCode).json({   //api를 받아 올 수 있다. 예외처리 중복코드, sql 문법오류 , DB서버 끊는거까지 가능하다 
         success: false,
         message: error.message
     });
 });
+//위에서 statusCode 를 설정한 이유는 RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: undefined 애러가 계속 나기 때문에 설정했습니다.
 
 
 
@@ -51,44 +47,3 @@ app.listen(port, () => {
 }) ;
 
 
-
-
-// // 회원가입
-// userRouter.post('/', validationMiddlewares.signup , async  (req, res, next) => {
-    
-//     const {id, password, name, phonenumber, email, address } = req.body;
-//     let conn = null;
-
-//     const result = {
-//         "success" : false,
-//         "message" : ""
-//     };
-
-//     try {
-
-//         conn = await pool.connect();
-
-//         // 아이디 중복체크
-//         const checkId = "SELECT id FROM backend.information WHERE id = $1";
-//         const findSameId = await pool.query(checkId, [id]);
-        
-//         const row = findSameId.rows
-
-//         if(row.length > 0){
-//             conn.end();
-//             throw new Error("중복된 아이디 입니다.");
-
-//         }
-        
-//         const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address) VALUES($1, $2, $3, $4, $5, $6)';
-//         const data = [id, password, name, email, phonenumber, address];
-
-//         await pool.query(sql,data);
-
-//         result.success = true;
-//         res.send(result);
-//         conn.end();
-//         next(error);
-//     } 
-
-// });
