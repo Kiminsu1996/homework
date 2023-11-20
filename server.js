@@ -28,7 +28,6 @@ app.use('/post', postRouter);
 const commentRouter = require("./src/router/comment");
 app.use('/comment', commentRouter);
 
-
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
     const statusCode = error.status || 500;
@@ -38,8 +37,6 @@ app.use((error, req, res, next) => {
     });
 });
 //위에서 statusCode 를 설정한 이유는 RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: undefined 애러가 계속 나기 때문에 설정했습니다.
-
-
 
 //웹서버 시작
 app.listen(port, () => {

@@ -1,4 +1,5 @@
 const { Pool } = require("pg");
+const { MongoClient } = require('mongodb');
 
 const db = {
     host: process.env.DB_HOST,
@@ -8,6 +9,12 @@ const db = {
     port : process.env.DB_PORT
 };
 
-const pool = new Pool(db);
+const url = 'mongodb://localhost:27017';
 
-module.exports = pool;
+const pool = new Pool(db);
+const client = new MongoClient(url);
+
+module.exports = {
+    pool,
+    client
+}

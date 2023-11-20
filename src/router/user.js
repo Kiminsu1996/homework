@@ -1,6 +1,7 @@
 const userRouter = require('express').Router();
-const { userIdx } = require('../middleware/authGuard');
-const pool = require('../database/databases');
+const {userIdx} = require('../middleware/authGuard');
+const {pool} = require('../database/databases');
+const {logMiddleware} = require('./logging'); 
 
 //유효성 검사 
 const validateId = (req, res, next) => {
@@ -107,9 +108,8 @@ const validationMiddlewares = {
 //     }, req, res); // req와 res 객체를 전달
 // });
 
-
 // 회원가입
-userRouter.post('/', validationMiddlewares.signup , async  (req, res, next) => {
+userRouter.post('/', validationMiddlewares.signup, async  (req, res, next) => {
     const {id, password, name, phonenumber, email, address } = req.body;
     let conn = null;
 
@@ -117,7 +117,7 @@ userRouter.post('/', validationMiddlewares.signup , async  (req, res, next) => {
         "success" : false,
         "message" : null
     };
-
+    
     try {
         conn = await pool.connect();
 
@@ -134,21 +134,22 @@ userRouter.post('/', validationMiddlewares.signup , async  (req, res, next) => {
         const data = [id, password, name, email, phonenumber, address];
 
         await pool.query(sql,data);
+        req.outputData = result.success;
         result.success = true;
 
+        await logMiddleware(req, res, next);
     } catch (error) {
         return next(error);
     }finally{
         if (conn){   // 여기에 if문을 넣은 이유는 위에 conn = await pool.getConnection(); << 이 코드에서 conn이 null 값으로 DB통신에서 문제가 생기면  if문을 통해서 오류를 확인하고  서버가 다운되지 않게 하기 위함이다.
             conn.end();
         }
+        res.send(result);
     }
-    res.send(result);
-    
 });
 
 //로그인
-userRouter.post('/login', validationMiddlewares.login ,async (req, res, next) => {
+userRouter.post('/login', validationMiddlewares.login, async (req, res, next) => {
     const {id, password} = req.body;
     let conn = null;
 
@@ -173,7 +174,10 @@ userRouter.post('/login', validationMiddlewares.login ,async (req, res, next) =>
         const userIdx = row[0].idx;
         req.session.idx = userIdx;
         result.success = true;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally {
@@ -181,14 +185,11 @@ userRouter.post('/login', validationMiddlewares.login ,async (req, res, next) =>
             conn.end(); 
         }
     }
-    res.send(result);
-
 });
 
 
 //로그아웃
 userRouter.post("/logout", async (req, res, next) => {
-
     const result = {
         "success" : false,
         "message" : null
@@ -202,14 +203,12 @@ userRouter.post("/logout", async (req, res, next) => {
         });
 
         result.success = true;
-
+        await logMiddleware(req, res, next);
     } catch (error) {
-        next(error);
+        return next(error);
+    }finally{
+        res.send(result);
     }
-
-    res.send(result);
-    
-
 });
 
 
@@ -231,13 +230,16 @@ userRouter.get('/', userIdx, async (req, res, next) => {
         const user = await pool.query(sql, data);
         const row = user.rows
 
-        if(!row.length){
+        if(row.length < 1){
             throw new Error("회원 정보 보기 실패");
         }
 
         result.success = true;
         result.data = row;
-        
+        req.outputData = result.data;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -245,8 +247,6 @@ userRouter.get('/', userIdx, async (req, res, next) => {
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 
@@ -275,7 +275,10 @@ userRouter.post('/find-id', validationMiddlewares.findId, async (req, res, next)
 
         result.success = true ;
         result.data = row;
+        req.outputData = result.data;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -283,8 +286,6 @@ userRouter.post('/find-id', validationMiddlewares.findId, async (req, res, next)
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 
@@ -313,7 +314,10 @@ userRouter.post('/find-pw', validationMiddlewares.findPw, async (req, res, next)
         }
         result.success = true;
         result.data = row;
+        req.outputData = result.data;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -321,8 +325,6 @@ userRouter.post('/find-pw', validationMiddlewares.findPw, async (req, res, next)
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 
@@ -349,15 +351,17 @@ userRouter.put('/', validationMiddlewares.changeUserInfo, userIdx, async (req, r
         }
 
         result.success = true;
+        req.outputData = result.success;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally { 
         if (conn){
-            conn.release();
+            conn.end();
         }
     }
-    res.send(result);
-
 });
 
 //회원탈퇴
@@ -387,6 +391,10 @@ userRouter.delete('/', userIdx, async (req, res, next) => {
         });
         
         result.success = true;
+        req.outputData = result.success;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -394,8 +402,6 @@ userRouter.delete('/', userIdx, async (req, res, next) => {
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 module.exports = userRouter;  // module.exports는 common js 모듈에서 사용된다. userRouter를 다른 파일에서 사용할 수 있도록 하는 역할  

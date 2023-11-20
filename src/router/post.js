@@ -1,6 +1,7 @@
 const postRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
-const pool = require('../database/databases');
+const {pool} = require('../database/databases');
+const {logMiddleware} = require('./logging');
 
 //유효성 검사 
 const validateBoardTitle = (req, res, next) => {
@@ -47,6 +48,10 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next
         }
 
         result.success = true;
+        req.outputData = result.success;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -54,8 +59,6 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next
             conn.end();
         }
     }
-    res.send(result);
-    
 });
 
 //전체 게시글 보기
@@ -68,20 +71,26 @@ postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그�
         "data" : null
     };
 
-    
     try {
         conn = await pool.connect();
 
         //전체 게시글 보기 
-        const searchAllPost = ` SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
+        const searchAllPost = `SELECT backend.information.idx, backend.board.board_idx, backend.information.id, backend.board.title 
                                 FROM backend.information 
-                                INNER JOIN backend.board ON backend.information.idx = backend.board.idx ` ;
+                                INNER JOIN backend.board ON backend.information.idx = backend.board.idx `;
         const allPost = await pool.query(searchAllPost);
         const row = allPost.rows
 
+        if(row.length < 1){
+            throw new Error("전체 게시글 보기 실패");
+        }
+
         result.success = true;
         result.data = row;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -89,8 +98,6 @@ postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그�
             conn.end();
         }
     }
-    res.send(result);
-   
 });
 
 //특정 게시글 보기  / !!!!!!!!!!!!로그인 상태 체크하기!!!!!!!!!!!!!!  < 이부분은 미들웨어에서 체크함! userIdx
@@ -126,6 +133,10 @@ postRouter.get('/:board_idx', userIdx, async (req, res, next) => {
          
         //통신은 성공인데 결과가 실패인경우가 이런 경우이기 때문에 
         //게시글의 board_idx의 값이 없으면 없다고 메세지 보내기
+        req.outputData = result.data;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -133,8 +144,6 @@ postRouter.get('/:board_idx', userIdx, async (req, res, next) => {
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 //게시글 수정 
@@ -163,7 +172,10 @@ postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next)
         }
     
         result.success = true;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -171,7 +183,6 @@ postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next)
             conn.end();
         }
     }
-    res.send(result);
 
 });
 
@@ -201,7 +212,10 @@ postRouter.delete('/',userIdx, async (req, res, next) =>{
         }
 
         result.success = true;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -209,7 +223,6 @@ postRouter.delete('/',userIdx, async (req, res, next) =>{
             conn.end();
         }
     }
-    res.send(result);
 });
 
 

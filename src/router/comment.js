@@ -1,6 +1,7 @@
 const commentRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
-const pool = require('../database/databases');
+const {pool} = require('../database/databases');
+const {logMiddleware} = require('./logging');
 
 const validateText = (req, res, next) => {
     const { text } = req.body;
@@ -42,7 +43,10 @@ commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res,
         }
 
         result.success = true;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally{
@@ -50,7 +54,6 @@ commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res,
             conn.end();
         }
     }
-    res.send(result);
 
 });
 
@@ -90,6 +93,10 @@ commentRouter.get('/:board_idx', userIdx, async (req, res, next) => {
             throw new Error("해당 댓글이 없습니다.");
         }
         //성공인데 데이터가 안오는 경우가 있으니깐 그럴땐 메세지로 알려주기 
+        req.outputData = result.data;
+
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -97,8 +104,6 @@ commentRouter.get('/:board_idx', userIdx, async (req, res, next) => {
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 //댓글 수정
@@ -132,7 +137,10 @@ commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res, 
         }
 
         result.success = true;
+        req.outputData = result.success;
 
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     } finally { 
@@ -140,8 +148,6 @@ commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res, 
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 //댓글 삭제
@@ -174,7 +180,10 @@ commentRouter.delete('/', userIdx, async (req, res, next) => {
         }
 
         result.success = true;
-
+        req.outputData = result.success;
+        
+        await logMiddleware(req, res, next);
+        res.send(result);
     } catch (error) {
         return next(error);
     }finally {
@@ -182,8 +191,6 @@ commentRouter.delete('/', userIdx, async (req, res, next) => {
             conn.end();
         }
     }
-    res.send(result);
-
 });
 
 module.exports = commentRouter;

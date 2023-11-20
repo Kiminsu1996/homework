@@ -1,6 +1,0 @@
-        conname         |    conrelid     | conkey |   confrelid   | confkey | confdeltype | confupdtype 
-------------------------+-----------------+--------+---------------+---------+-------------+-------------
- comment_board_idx_fkey | backend.comment | {3}    | backend.board | {1}     | a           | a
- fk_board_board_idx     | backend.comment | {3}    | backend.board | {1}     | c           | a
-(2 rows)
-
