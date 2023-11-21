@@ -1,7 +1,7 @@
 const userRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
 const {pool} = require('../database/databases');
-const {logMiddleware} = require('./logging'); 
+const {logMiddleware} = require('../logging/logging'); 
 
 //유효성 검사 
 const validateId = (req, res, next) => {

@@ -28,6 +28,9 @@ app.use('/post', postRouter);
 const commentRouter = require("./src/router/comment");
 app.use('/comment', commentRouter);
 
+const logDataRouter = require("./src/router/log-data");
+app.use('/log-data',logDataRouter);
+
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
     const statusCode = error.status || 500;
