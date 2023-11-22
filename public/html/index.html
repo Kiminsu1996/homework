@@ -4,12 +4,15 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="/css/login.css"/>
-        <title>Document</title>
+        <title>혁이의 꿈</title>
     </head>
     
     <body>
-        <nav id="navBar">
-        </nav>
+        <h1>안녕하세요 저는 임혁 입니다</h1>
+        <p>존잘이죠! 저의 꿈은 이쁜 여자랑 결혼하는 거에요 ㅎㅎㅎㅎ</p>
+
+        <!-- <nav id="navBar">
+        </nav> -->
       
         <!-- <h1>Node.js Test</h1>
         <div>
@@ -21,48 +24,48 @@
         <div> -->
      
         <script>
-           function createNav(){
+        //    function createNav(){
 
-            var nav = document.querySelector("nav")
-            var boardTitle = document.createElement("div")
-            boardTitle.id = "title"
+        //     var nav = document.querySelector("nav")
+        //     var boardTitle = document.createElement("div")
+        //     boardTitle.id = "title"
 
-            var goHome = document.createElement("a")
-            goHome.href = "http://13.124.75.178:7000/"
-            goHome.innerHTML ="HOME"
+        //     var goHome = document.createElement("a")
+        //     goHome.href = "http://13.124.75.178:7000/"
+        //     goHome.innerHTML ="HOME"
 
-            var boardBtn = document.createElement("button")
-            boardBtn.type ="button"
-            boardBtn.innerHTML = "게시판"
-            boardBtn.addEventListener("click",goBoardListEvnet)
+        //     var boardBtn = document.createElement("button")
+        //     boardBtn.type ="button"
+        //     boardBtn.innerHTML = "게시판"
+        //     boardBtn.addEventListener("click",goBoardListEvnet)
       
-            boardTitle.append(goHome,boardBtn)
-            nav.appendChild(boardTitle)
+        //     boardTitle.append(goHome,boardBtn)
+        //     nav.appendChild(boardTitle)
 
            
-            var nav = document.querySelector("nav")
-            var loginDiv = document.createElement("div")
-            var loginBtn = document.createElement("button")
-            loginBtn.type = "button"
-            loginBtn.innerHTML ="로그인"
-            loginBtn.addEventListener("click",goLoginEvent)
+        //     var nav = document.querySelector("nav")
+        //     var loginDiv = document.createElement("div")
+        //     var loginBtn = document.createElement("button")
+        //     loginBtn.type = "button"
+        //     loginBtn.innerHTML ="로그인"
+        //     loginBtn.addEventListener("click",goLoginEvent)
 
-            loginDiv.appendChild(loginBtn)
-            nav.appendChild(loginDiv)
+        //     loginDiv.appendChild(loginBtn)
+        //     nav.appendChild(loginDiv)
             
-        }
+        // }
 
-        function goLoginEvent(){
-            location.href = "login-page"
-        }
+        // function goLoginEvent(){
+        //     location.href = "login-page"
+        // }
  
-        function goBoardListEvnet(){
-            location.href = "jsp/viewPage/boardList.jsp"
-        }    
+        // function goBoardListEvnet(){
+        //     location.href = "jsp/viewPage/boardList.jsp"
+        // }    
 
-        window.onload = function() {
-            createNav()
-        }
+        // window.onload = function() {
+        //     createNav()
+        // }
 
         </script>
 

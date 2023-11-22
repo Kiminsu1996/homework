@@ -1,6 +1,8 @@
 require('dotenv').config(); //지우지말것...ㅠㅠ이걸 지워서 계속 오류발생했다 인수야 2시간 날렸다 이것때문에
 const express = require("express"); //자바스크립트에서 다른 자바스크립트를 인폴트 할 수 있는 기능이 node에서 만들어졌음 node_module에 있는 express를 불러오는 것 
 const session = require("express-session");
+const https = require('https');
+const fs = require('fs');
 const app = express();  // express를 사용하기 위해 app이라는 변수에 express 모듈을 호출하는 것 이다.
 const port = 7000;
 
@@ -31,6 +33,7 @@ app.use('/comment', commentRouter);
 const logDataRouter = require("./src/router/log-data");
 app.use('/log-data',logDataRouter);
 
+
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
     const statusCode = error.status || 500;
@@ -41,9 +44,21 @@ app.use((error, req, res, next) => {
 });
 //위에서 statusCode 를 설정한 이유는 RangeError [ERR_HTTP_INVALID_STATUS_CODE]: Invalid status code: undefined 애러가 계속 나기 때문에 설정했습니다.
 
-//웹서버 시작
+
+
+// const options = {
+//     key: fs.readFileSync('/etc/letsencrypt/live/kiminsudev.pro/privkey.pem'),
+//     cert: fs.readFileSync('/etc/letsencrypt/live/kiminsudev.pro/fullchain.pem'),
+//   };
+  
+//   //웹서버 시작
+//   https.createServer(options, app).listen(port, () => {
+//     console.log(`${port}번에서 http 웹서버 실행`);
+//   });
+  
 app.listen(port, () => {
     console.log(`${port}번에서 http 웹서버 실행`);
 }) ;
+
 
 
