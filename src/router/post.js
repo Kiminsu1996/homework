@@ -1,7 +1,7 @@
 const postRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
-const {pool} = require('../database/databases');
-const {logMiddleware} = require('../logging/logging');
+const {pool} = require('../config/database/databases');
+const {logMiddleware} = require('../module/logging');
 
 //유효성 검사 
 const validateBoardTitle = (req, res, next) => {
@@ -43,14 +43,14 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next
         const data = [userIdx, title, text];
         const makePost = await pool.query(sql, data);
 
-        if(makePost.rowCount < 1){
+        if(makePost.rowCount < 1){  // 이부분은 INSERT 가 안되면 DB에러가 발생하기 때문에 자동으로 catch로 가기 때문에 이렇게 예외처리 안해줘도 된다.
             throw new Error ("게시판 작성 실패");
         }
 
         result.success = true;
         req.outputData = result.success;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -100,7 +100,6 @@ postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그�
     }
 });
 
-//특정 게시글 보기  / !!!!!!!!!!!!로그인 상태 체크하기!!!!!!!!!!!!!!  < 이부분은 미들웨어에서 체크함! userIdx
 postRouter.get('/:board_idx', userIdx, async (req, res, next) => { 
     const boardIdx  = req.params.board_idx;
     let conn = null;
@@ -131,8 +130,6 @@ postRouter.get('/:board_idx', userIdx, async (req, res, next) => {
             throw new Error("해당 게시글이 없습니다.");
         }
          
-        //통신은 성공인데 결과가 실패인경우가 이런 경우이기 때문에 
-        //게시글의 board_idx의 값이 없으면 없다고 메세지 보내기
         req.outputData = result.data;
 
         await logMiddleware(req, res, next);

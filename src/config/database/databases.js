@@ -12,7 +12,7 @@ const db = {
 const url = 'mongodb://localhost:27017';
 
 const pool = new Pool(db);
-const client = new MongoClient(url);
+const client = new MongoClient(url);   //몽고DB는 기본적으로 Pool 방법이다.
 
 module.exports = {
     pool,

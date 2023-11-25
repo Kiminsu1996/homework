@@ -15,9 +15,5 @@ const getUserIdx = (req, res, next) => {
 
 const userIdx = [getUserIdx];
 
-module.exports = {
-
-    userIdx
-
-};
+module.exports = {userIdx};
 

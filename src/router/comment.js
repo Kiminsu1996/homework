@@ -1,7 +1,7 @@
 const commentRouter = require('express').Router();
 const {userIdx} = require('../middleware/authGuard');
-const {pool} = require('../database/databases');
-const {logMiddleware} = require('../logging/logging');
+const {pool} = require('../config/database/databases');
+const {logMiddleware} = require('../module/logging');
 
 const validateText = (req, res, next) => {
     const { text } = req.body;
