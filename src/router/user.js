@@ -1,5 +1,6 @@
 const userRouter = require('express').Router();
-const {userIdx} = require('../middleware/authGuard');
+const authModule = require("../module/auth");
+const authenticateToken = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging'); 
 const exception = require("../module/exception");
@@ -16,6 +17,7 @@ const {
         minPhonenumberLength,
         minEmailLength,
         minAddressLength } = require('../module/lengths');
+
 
 // 회원가입
 userRouter.post('/', async  (req, res, next) => {
@@ -54,7 +56,7 @@ userRouter.post('/', async  (req, res, next) => {
         req.outputData = result.success;
         result.success = true;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -72,7 +74,10 @@ userRouter.post('/login', async (req, res, next) => {
 
     const result = {
         "success" : false,
-        "message" : null
+        "message" : null,
+        "data" :{
+            "token" : null
+        }
     };
 
     try {
@@ -92,12 +97,19 @@ userRouter.post('/login', async (req, res, next) => {
             throw new Error("회원 정보가 없습니다.")
         }
 
-        const userIdx = row[0].idx;
-        req.session.idx = userIdx;
+        const token = authModule.createToken({
+            idx: row[0].idx,
+            id: row[0].id,
+            pw: row[0].password,
+            name: row[0].name,
+            email: row[0].email
+        });
+
+        result.data.token = token;
         result.success = true;
         req.outputData = result.success;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -111,31 +123,14 @@ userRouter.post('/login', async (req, res, next) => {
 
 //로그아웃
 userRouter.post("/logout", async (req, res, next) => {
-    const result = {
-        "success" : false,
-        "message" : null
-    };
-
-    try {
-        req.session.destroy((error) => {
-            if (error) {
-                throw new Error("세션 제거 실패");
-            }
-        });
-
-        result.success = true;
-        await logMiddleware(req, res, next);
-    } catch (error) {
-        return next(error);
-    }finally{
-        res.send(result);
-    }
+    res.clearCookie('token');
+    res.json({success: true, massage: "로그아웃 되었습니다."})
 });
 
 
 //회원정보 보기
-userRouter.get('/', userIdx, async (req, res, next) => { 
-    const userIdx =  req.userIdx;
+userRouter.get('/', authenticateToken, async (req, res, next) => { 
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -159,7 +154,7 @@ userRouter.get('/', userIdx, async (req, res, next) => {
         result.data = row;
         req.outputData = result.data;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -203,7 +198,7 @@ userRouter.post('/find-id',  async (req, res, next) => {
         result.data = row;
         req.outputData = result.data;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -247,7 +242,7 @@ userRouter.post('/find-pw',  async (req, res, next) => {
         result.data = row;
         req.outputData = result.data;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -260,9 +255,9 @@ userRouter.post('/find-pw',  async (req, res, next) => {
 
 
 //회원정보 수정
-userRouter.put('/', userIdx, async (req, res, next) => {
+userRouter.put('/', authenticateToken, async (req, res, next) => {
     const {id, password, name, phonenumber, email, address} = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -291,7 +286,7 @@ userRouter.put('/', userIdx, async (req, res, next) => {
         result.success = true;
         req.outputData = result.success;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);
@@ -303,8 +298,8 @@ userRouter.put('/', userIdx, async (req, res, next) => {
 });
 
 //회원탈퇴
-userRouter.delete('/', userIdx, async (req, res, next) => {
-    const userIdx =  req.userIdx;
+userRouter.delete('/', authenticateToken, async (req, res, next) => {
+    const userIdx =  req.decode.idx;;
     let conn = null;
 
     const result = {
@@ -321,16 +316,11 @@ userRouter.delete('/', userIdx, async (req, res, next) => {
             throw new Error("회원탈퇴 실패"); 
         }
 
-        req.session.destroy((error) => {
-            if(error){
-                throw new Error("세션 오류 발생");
-            }
-        });
-        
         result.success = true;
+        result.message = "회원탈퇴 되었습니다. 쿠키를 삭제해주세요."
         req.outputData = result.success;
 
-        await logMiddleware(req, res, next);
+        logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
         return next(error);

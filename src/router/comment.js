@@ -1,24 +1,14 @@
 const commentRouter = require('express').Router();
-const {userIdx} = require('../middleware/authGuard');
+const authenticateToken = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
-
-const validateText = (req, res, next) => {
-    const { text } = req.body;
-    if (!text || !/^.{5,100}$/.test(text)) {
-        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
-    }
-    next();
-};
-
-const validationMiddlewares = {
-    comment : [validateText]
-}
+const exception = require("../module/exception");
+const {maxText, minText} = require("../module/lengths");
 
 //댓글 작성
-commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res, next) => {
+commentRouter.post('/', authenticateToken, async (req, res, next) => {
     const {boardIdx, text} = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
    
     const result = {
@@ -27,6 +17,8 @@ commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res,
     };
 
     try {
+        exception(text, "text").checkInput().checkLength(minText, maxText);
+
         if( !boardIdx || boardIdx === "" ){
             throw new Error ("게시판을 찾을 수 없습니다.");
         }
@@ -58,7 +50,7 @@ commentRouter.post('/', validationMiddlewares.comment, userIdx, async (req, res,
 });
 
 //게시판 댓글 보기
-commentRouter.get('/:board_idx', userIdx, async (req, res, next) => { 
+commentRouter.get('/:board_idx', async (req, res, next) => { 
     const boardIdx = req.params.board_idx;
     let conn = null;
 
@@ -107,9 +99,9 @@ commentRouter.get('/:board_idx', userIdx, async (req, res, next) => {
 });
 
 //댓글 수정
-commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res, next) => {
+commentRouter.put('/', authenticateToken, async (req, res, next) => {
     const {boardIdx, commentIdx, text} = req.body
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -118,6 +110,8 @@ commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res, 
     };
 
     try {
+        exception(text, "text").checkInput().checkLength(minText, maxText);
+
         if( !boardIdx || boardIdx === "" ){
             throw new Error ("게시판을 찾을 수 없습니다.");
         }
@@ -151,9 +145,9 @@ commentRouter.put('/', validationMiddlewares.comment, userIdx, async (req, res, 
 });
 
 //댓글 삭제
-commentRouter.delete('/', userIdx, async (req, res, next) => {
+commentRouter.delete('/', authenticateToken, async (req, res, next) => {
     const {commentIdx, boardIdx} = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
     
     const result = {

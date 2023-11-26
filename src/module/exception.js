@@ -8,6 +8,7 @@ const errorMessage = {
 
 
 function Excetpion(input, name){
+    
     this.checkInput = () => {
         if(!input || input === ""){
             this.setError(errorMessage.invalidRequest);

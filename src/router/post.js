@@ -1,33 +1,14 @@
 const postRouter = require('express').Router();
-const {userIdx} = require('../middleware/authGuard');
+const authenticateToken = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
-
-//유효성 검사 
-const validateBoardTitle = (req, res, next) => {
-    const { title } = req.body;
-    if (!title || !/^.{5,30}$/.test(title)) {
-        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
-    }
-    next();
-};
-
-const validateText = (req, res, next) => {
-    const { text } = req.body;
-    if (!text || !/^.{5,100}$/.test(text)) {
-        return res.status(400).send({ success: false, message: "내용을 적어주세요." });
-    }
-    next();
-};
-
-const validationMiddlewares = {
-    board : [validateBoardTitle, validateText ]
-}
+const exception = require("../module/exception");
+const {maxTitle, maxText, minTitle, minText} = require("../module/lengths");
 
 //게시글 작성
-postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next) => {
+postRouter.post('/',authenticateToken, async (req, res, next) => {
     const { title, text } = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -36,6 +17,9 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next
     };
 
     try {
+        exception(title, "title").checkInput().checkLength(minTitle, maxTitle);
+        exception(text, "text").checkInput().checkLength(minText, maxText);
+
         conn = await pool.connect();
 
         //게시글 작성 
@@ -62,7 +46,7 @@ postRouter.post('/', validationMiddlewares.board, userIdx, async (req, res, next
 });
 
 //전체 게시글 보기
-postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
+postRouter.get('/all',  async (req, res, next) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
     let conn = null;
 
     const result = {
@@ -82,7 +66,7 @@ postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그�
         const row = allPost.rows
 
         if(row.length < 1){
-            throw new Error("전체 게시글 보기 실패");
+            throw new Error("게시글이 없습니다.");
         }
 
         result.success = true;
@@ -100,7 +84,8 @@ postRouter.get('/all', userIdx, async (req, res, next) => {  //여기도 로그�
     }
 });
 
-postRouter.get('/:board_idx', userIdx, async (req, res, next) => { 
+//특정 게시글 보기 
+postRouter.get('/:board_idx', async (req, res, next) => { 
     const boardIdx  = req.params.board_idx;
     let conn = null;
 
@@ -144,9 +129,9 @@ postRouter.get('/:board_idx', userIdx, async (req, res, next) => {
 });
 
 //게시글 수정 
-postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next) => {
+postRouter.put('/', authenticateToken, async (req, res, next) => {
     const{ board_idx, title, text } = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -155,6 +140,8 @@ postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next)
     };
     
     try {
+        exception(title, "title").checkInput().checkLength(minTitle, maxTitle);
+        exception(text, "text").checkInput().checkLength(minText, maxText);
         // 빈값체크 
         if( !board_idx || board_idx === "" ){
             throw new Error ("게시글을 찾을 수 없습니다.");
@@ -184,9 +171,9 @@ postRouter.put('/', validationMiddlewares.board, userIdx, async (req, res, next)
 });
 
 //게시글 삭제
-postRouter.delete('/',userIdx, async (req, res, next) =>{
+postRouter.delete('/',authenticateToken,  async (req, res, next) =>{
     const {board_idx} = req.body;
-    const userIdx =  req.userIdx;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {

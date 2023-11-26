@@ -1,19 +1,25 @@
-//userIdx 유효성 검사 
-const getUserIdx = (req, res, next) => {
+const jwt = require('jsonwebtoken');
+const jwtConfig = require("../config/jwtConfig");
 
-    const userIdx = req.session.idx;
+const authenticateToken = (req, res, next) => {
+    const token = req.headers.token;
     
-    if (!userIdx || userIdx === "") {
-        return res.status(400).send({ success: false, message: "로그인 해주세요." });
+    try {
+        if(!token) {
+            throw new Error("no token");
+        }
+
+        jwt.verify(token, jwtConfig.secret);
+        const payload = token.split(".")[1];
+        const convert = Buffer.from(payload, "base64");
+        const data = JSON.parse(convert.toString());
+        req.decode = data;
+        
+        next();
+
+    } catch (error) {
+       return next(error)
     }
-    
-    req.userIdx = userIdx; // req 객체에 userIdx를 설정
-
-    next();
-
-};
-
-const userIdx = [getUserIdx];
-
-module.exports = {userIdx};
+}
+module.exports = authenticateToken;
 

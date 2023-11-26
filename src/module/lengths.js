@@ -14,11 +14,12 @@ module.exports = {
     minEmailLength : 8,
     minAddressLength : 10,
 
-    //post
+    //post, comment
 
+    maxTitle : 30,
+    maxText : 100,
 
-
-    //comment
-
+    minTitle : 5,
+    minText : 5
 
 }

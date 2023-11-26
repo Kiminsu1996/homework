@@ -9,7 +9,7 @@ const logMiddleware = async (req, res, next) => {
 
         const logData = {
             'ip': req.ip,
-            'accountIdx': req.session.idx,
+            'accountIdx': req.decode.idx, 
             'apiName': req.originalUrl,
             'requestMethod': req.method,
             'inputData': req.body,
