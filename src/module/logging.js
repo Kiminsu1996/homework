@@ -6,10 +6,11 @@ const logMiddleware = async (req, res, next) => {
 
     try {
         conn = await client.connect();
+        const accountIdx = req.decode && req.decode.idx ? req.decode.idx : 'undefined';
 
         const logData = {
             'ip': req.ip,
-            'accountIdx': req.decode.idx, 
+            'accountIdx': accountIdx, 
             'apiName': req.originalUrl,
             'requestMethod': req.method,
             'inputData': req.body,
