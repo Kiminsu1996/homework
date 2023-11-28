@@ -4,7 +4,7 @@ const cookieParser  = require("cookie-parser");
 const app = express();  // express를 사용하기 위해 app이라는 변수에 express 모듈을 호출하는 것 이다.
 const port = 7000;
 
-//전역 미들웨어 설정
+//전역 미들웨어 설정 
 app.use(express.json());  //json을 해독하기 위한 설정 
 
 // 라우팅 설정
@@ -26,6 +26,7 @@ app.use('/log', logDataRouter);
 
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
+    console.log(error);
     const statusCode = error.status || 500;
     res.status(statusCode).json({   //api를 받아 올 수 있다. 예외처리 중복코드, sql 문법오류 , DB서버 끊는거까지 가능하다 
         success: false,

@@ -1,4 +1,11 @@
 {
+  "name": "project-name",
+  "description": "",
+  "main": "server.js",
+  "version": "",
+  "scripts": {
+    "dev": "nodemon server.js"
+  },
   "dependencies": {
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.3.1",

@@ -1,4 +1,4 @@
-const {idRegex, pwRegex, nameRegex, phonenumberRegex, emailRegex} = require("../module/regex");
+const {idRegex, pwRegex, nameRegex, phonenumberRegex, emailRegex ,dateRegex} = require("../module/regex");
 const errorMessage = {
     invalidRequest : "입력 값을 확인하세요.",
     length : "문자 길이를 확인하세요.",
@@ -61,6 +61,13 @@ function Excetpion(input, name){
     this.isNumber = () => {
         if(isNaN(Number(input))){
             this.setError(errorMessage.isNumber);
+        }
+        return this;
+    }
+
+    this.checkDate = () =>{
+        if(!dateRegex.test(input)){
+            this.setError(errorMessage.regex);
         }
         return this;
     }

@@ -13,12 +13,11 @@ const authenticateToken = (req, res, next) => {
         const payload = token.split(".")[1];
         const convert = Buffer.from(payload, "base64");
         const data = JSON.parse(convert.toString());
-        req.decode = data;
-        
+        req.decode = data;        
         next();
-
+        
     } catch (error) {
-       return next(error)
+       return next(error);
     }
 }
 module.exports = authenticateToken;

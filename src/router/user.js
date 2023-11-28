@@ -21,7 +21,7 @@ const {
 
 // 회원가입
 userRouter.post('/', async  (req, res, next) => {
-    const {id, password, name, phonenumber, email, address } = req.body;
+    const {id, password, name, phonenumber, email, address, position } = req.body;
     let conn = null;
 
     const result = {
@@ -37,20 +37,29 @@ userRouter.post('/', async  (req, res, next) => {
         exception(phonenumber, "phonenumber").checkInput().checkPhoneRegex().checkLength(minPhonenumberLength, maxPhonenumberLength);
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
         exception(address, "address").checkInput().checkLength(minAddressLength, maxAddressLength);
+        exception(position, "position").checkInput().checkLength(1,2);
 
         conn = await pool.connect();
 
-        // 아이디 중복체크
+        // 아이디, 이메일 중복체크
         const checkId = "SELECT id FROM backend.information WHERE id = $1";
         const findSameId = await pool.query(checkId, [id]);
-        const row = findSameId.rows
+        const rowId = findSameId.rows
 
-        if(row.length > 0){
+        const checkEmail = "SELECT id FROM backend.information WHERE email = $1";
+        const findSameEmail = await pool.query(checkEmail, [email]);
+        const rowEmail = findSameEmail.rows
+
+        if(rowId.length > 0){
             throw new Error("중복된 아이디 입니다.")
         }
+
+        if(rowEmail.length > 0){
+            throw new Error("중복된 이메일 입니다.")
+        }
         
-        const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address) VALUES($1, $2, $3, $4, $5, $6)';
-        const data = [id, password, name, email, phonenumber, address];
+        const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address, position) VALUES($1, $2, $3, $4, $5, $6, $7)';
+        const data = [id, password, name, email, phonenumber, address, position];
 
         await pool.query(sql,data);
         req.outputData = result.success;
@@ -102,7 +111,8 @@ userRouter.post('/login', async (req, res, next) => {
             id: row[0].id,
             pw: row[0].password,
             name: row[0].name,
-            email: row[0].email
+            email: row[0].email,
+            position: row[0].position
         });
 
         result.data.token = token;
@@ -123,8 +133,7 @@ userRouter.post('/login', async (req, res, next) => {
 
 //로그아웃
 userRouter.post("/logout", async (req, res, next) => {
-    res.clearCookie('token');
-    res.json({success: true, massage: "로그아웃 되었습니다."})
+    res.json({success: true, massage: "로그아웃 되었습니다. 토큰을 삭제해 주세요."})
 });
 
 
@@ -212,7 +221,6 @@ userRouter.post('/find-id',  async (req, res, next) => {
 
 //비밀번호 찾기
 userRouter.post('/find-pw',  async (req, res, next) => {
-
     const {id, name, phonenumber, email} = req.body;
     let conn = null;
 
@@ -256,7 +264,7 @@ userRouter.post('/find-pw',  async (req, res, next) => {
 
 //회원정보 수정
 userRouter.put('/', authenticateToken, async (req, res, next) => {
-    const {id, password, name, phonenumber, email, address} = req.body;
+    const {id, password, name, phonenumber, email, address, position} = req.body;
     const userIdx =  req.decode.idx;
     let conn = null;
 
@@ -272,12 +280,16 @@ userRouter.put('/', authenticateToken, async (req, res, next) => {
         exception(phonenumber, "phonenumber").checkInput().checkPhoneRegex().checkLength(minPhonenumberLength, maxPhonenumberLength);
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
         exception(address, "address").checkInput().checkLength(minAddressLength, maxAddressLength);
+        exception(position, "position").checkInput().checkLength(1,2);
 
         conn = await pool.connect();
 
         //회원정보 수정
-        const updateSql = 'UPDATE backend.information SET id = $1, password = $2, name = $3, phonenumber = $4, email = $5, address = $6 WHERE idx = $7';
-        const updateResult = await pool.query(updateSql, [id, password, name, phonenumber, email, address, userIdx]);
+        const updateSql = 'UPDATE backend.information SET id = $1, password = $2, name = $3, phonenumber = $4, email = $5, address = $6, position = $7 WHERE idx = $8'; 
+        const data = [id, password, name, phonenumber, email, address, position, userIdx];
+        const updateResult = await pool.query(updateSql, data);
+
+        console.log()
 
         if(updateResult.rowCount < 1){
             throw new Error("회원 정보 수정 실패");
@@ -317,7 +329,7 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
         }
 
         result.success = true;
-        result.message = "회원탈퇴 되었습니다. 쿠키를 삭제해주세요."
+        result.message = "회원탈퇴 되었습니다.";
         req.outputData = result.success;
 
         logMiddleware(req, res, next);

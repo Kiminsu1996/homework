@@ -15,7 +15,6 @@ module.exports = {
     minAddressLength : 10,
 
     //post, comment
-
     maxTitle : 30,
     maxText : 100,
 
