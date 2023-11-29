@@ -146,4 +146,4 @@ module.exports = logDataRouter;
 
 //get 요청시 req.query 와 req.params 를 사용하는 상황 
 //req.query 사용 : 필터링, 정렬 등의 목적으로 사용될 때 
-//req.params 사용 : 특정 리소스나 항목을 식별하는 데 사용될 때 
+//req.params 사용 : 특정 리소스나 항목을 식별하는 데 사용될 때 사용
