@@ -1,8 +1,10 @@
 const userRouter = require('express').Router();
+const redis = require("redis").createClient();
 const authModule = require("../module/auth");
-const authenticateToken = require("../middleware/authGuard.js");
+const {authenticateToken} = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
-const {logMiddleware} = require('../module/logging'); 
+const {logMiddleware} = require('../module/logging');
+const moment = require('moment-timezone'); 
 const exception = require("../module/exception");
 const {
         maxIdLength, 
@@ -79,22 +81,25 @@ userRouter.post('/', async  (req, res, next) => {
 //로그인
 userRouter.post('/login', async (req, res, next) => {
     const {id, password} = req.body;
+    const today = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
     let conn = null;
 
     const result = {
         "success" : false,
         "message" : null,
         "data" :{
-            "token" : null
+            "token" : null,
+            "loginCount" : null
         }
     };
 
     try {
-
         exception(id, "id").checkInput().checkIdRegex().checkLength(minIdLength, maxIdLength);
         exception(password, "password").checkInput().checkPwRegex().checkLength(minPwLength, maxPwLength);
 
         conn = await pool.connect();
+        await redis.connect();
+        await redis.sAdd(`loginUsers:${today}`, id);
 
         //로그인 쿼리문
         const sql = "SELECT * FROM backend.information WHERE id = $1 AND password = $2";
@@ -105,17 +110,13 @@ userRouter.post('/login', async (req, res, next) => {
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
         }
-
-        const token = authModule.createToken({
-            idx: row[0].idx,
-            id: row[0].id,
-            pw: row[0].password,
-            name: row[0].name,
-            email: row[0].email,
-            position: row[0].position
-        });
+        
+        const isManager = row[0].position === "2";
+        const token = authModule.generateToken(row[0], isManager);
+        const loginCount = await redis.sCard(`loginUsers:${today}`);
 
         result.data.token = token;
+        result.data.loginCount = loginCount;
         result.success = true;
         req.outputData = result.success;
 
@@ -127,6 +128,7 @@ userRouter.post('/login', async (req, res, next) => {
         if (conn){
             conn.end(); 
         }
+        redis.disconnect();
     }
 });
 

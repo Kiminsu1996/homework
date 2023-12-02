@@ -1,5 +1,5 @@
 const commentRouter = require('express').Router();
-const authenticateToken = require("../middleware/authGuard.js");
+const {authenticateToken} = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
 const exception = require("../module/exception");

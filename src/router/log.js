@@ -1,40 +1,34 @@
 const logDataRouter = require('express').Router();
 const { client } = require('../config/database/databases');
-const authenticateToken = require("../middleware/authGuard.js");
+const {authenticateManagerToken} = require("../middleware/authGuard.js");
 const exception = require("../module/exception");
 const {maxIdLength, minIdLength} = require('../module/lengths');
 
 //logging 오름차순, 내림차순 조회
-logDataRouter.get('/logs/:order', authenticateToken, async (req, res, next) =>{
+logDataRouter.get('/logs/:order', authenticateManagerToken , async (req, res, next) =>{ 
     let conn = null;
-    const position = req.decode.position;
 
     try {
         conn = await client.connect();
 
         switch (req.params.order) {
-            case 'asc':
+            case '1':
                 order = 1;
                 break;
-            case 'desc':
+            case '2':
                 order = -1;
                 break;
             default:
                 throw new Error(' 잘못된 입력 값 입니다.');
         }
 
-        if(position === "2"){
-            const logs = await conn.db("logging").collection("data").find({}).sort({"timestamp" : order}).toArray();
+        const logs = await conn.db("logging").collection("data").find({}).sort({"timestamp" : order}).toArray();
 
-            if(logs.length < 1){
-                throw new Error("등록된 데이터가 없습니다.");
-            }
-
-            res.send(logs);
-        }else{
-            throw new Error("권한이 없습니다.");
+        if(logs.length < 1){
+            throw new Error("등록된 데이터가 없습니다.");
         }
 
+        res.send(logs);
     } catch (error) {
         return next(error);
     } finally {
@@ -46,27 +40,20 @@ logDataRouter.get('/logs/:order', authenticateToken, async (req, res, next) =>{
 
 
 //특정 id 조회
-logDataRouter.get('/id/:id', authenticateToken, async (req, res, next) =>{
+logDataRouter.get('/id/:id', authenticateManagerToken, async (req, res, next) =>{
     let conn = null;
-    const position = req.decode.position;
     const id =  req.params.id;
 
     try {
         exception(id, "id").checkInput().checkIdRegex().checkLength(minIdLength, maxIdLength);
         conn = await client.connect();
-    
-        if(position === "2"){
-            const logs = await conn.db("logging").collection("data").find({"inputData.id": id}).toArray();
+        const logs = await conn.db("logging").collection("data").find({"inputData.id": id}).toArray();
 
-            if(logs.length < 1){
-                throw new Error("등록된 데이터가 없습니다.");
-            }
-
-            res.send(logs);
-        }else{
-            throw new Error("권한이 없습니다.");
+        if(logs.length < 1){
+            throw new Error("등록된 데이터가 없습니다.");
         }
-        
+
+        res.send(logs);
     } catch (error) {
         return next(error);
     } finally {
@@ -78,27 +65,20 @@ logDataRouter.get('/id/:id', authenticateToken, async (req, res, next) =>{
 
 
 //특정 api 조회
-logDataRouter.get('/api', authenticateToken, async (req, res, next) =>{ 
+logDataRouter.get('/api', authenticateManagerToken, async (req, res, next) =>{ 
     let conn = null;
-    const position = req.decode.position;
     const apiName = req.query.apiName; 
 
     try {
         exception(apiName, "apiName").checkInput()
         conn = await client.connect();
-        
-        if(position === "2"){
-            const logs = await conn.db("logging").collection("data").find({"apiName": '/' + apiName}).toArray();
-    
-            if(logs.length < 1){
-                throw new Error("등록된 데이터가 없습니다.");
-            }
+        const logs = await conn.db("logging").collection("data").find({"apiName": '/' + apiName}).toArray();
 
-            res.send(logs);
-        }else{
-            throw new Error("권한이 없습니다.");
+        if(logs.length < 1){
+            throw new Error("등록된 데이터가 없습니다.");
         }
 
+        res.send(logs);
     } catch (error) {
         return next(error);
     }finally {
@@ -110,7 +90,7 @@ logDataRouter.get('/api', authenticateToken, async (req, res, next) =>{
 
 
 //일자 범위로 조회
-logDataRouter.get('/date-range', authenticateToken, async (req, res, next) => {
+logDataRouter.get('/date-range', authenticateManagerToken, async (req, res, next) => {
     const {startDate, endDate} = req.query;
     let conn = null;
     const position = req.decode.position;
@@ -119,19 +99,13 @@ logDataRouter.get('/date-range', authenticateToken, async (req, res, next) => {
         exception(startDate, "startDate").checkInput().checkDate();
         exception(endDate, "endDate").checkInput().checkDate();
         conn = await client.connect();
+        const logs = await conn.db("logging").collection("data").find({"timestamp": {$gte: startDate, $lte: endDate}}).toArray();
 
-        if(position === "2"){
-            const logs = await conn.db("logging").collection("data").find({"timestamp": {$gte: startDate, $lte: endDate}}).toArray();
-    
-            if(logs.length < 1){
-                throw new Error("등록된 데이터가 없습니다.");
-            }
-
-            res.send(logs);
-        }else{
-            throw new Error("권한이 없습니다.");
+        if(logs.length < 1){
+            throw new Error("등록된 데이터가 없습니다.");
         }
 
+        res.send(logs);
     } catch (error) {
         return next(error);
     } finally {
@@ -140,7 +114,6 @@ logDataRouter.get('/date-range', authenticateToken, async (req, res, next) => {
         }
     }
 });
-
 
 module.exports = logDataRouter;
 
