@@ -15,6 +15,7 @@
     "moment-timezone": "^0.5.43",
     "mongodb": "^6.3.0",
     "mongoose": "^8.0.1",
+    "node-cron": "^3.0.3",
     "pg": "^8.11.3",
     "pg-pool": "^3.6.1",
     "redis": "^4.6.11",

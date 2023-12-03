@@ -1,11 +1,12 @@
 const userRouter = require('express').Router();
 const redis = require("redis").createClient();
+const moment = require('moment-timezone'); 
 const authModule = require("../module/auth");
 const {authenticateToken} = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
-const moment = require('moment-timezone'); 
 const exception = require("../module/exception");
+const loginCron = require("../module/loginCron");
 const {
         maxIdLength, 
         maxPwLength, 
@@ -98,8 +99,6 @@ userRouter.post('/login', async (req, res, next) => {
         exception(password, "password").checkInput().checkPwRegex().checkLength(minPwLength, maxPwLength);
 
         conn = await pool.connect();
-        await redis.connect();
-        await redis.sAdd(`loginUsers:${today}`, id);
 
         //로그인 쿼리문
         const sql = "SELECT * FROM backend.information WHERE id = $1 AND password = $2";
@@ -109,17 +108,22 @@ userRouter.post('/login', async (req, res, next) => {
 
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
+        }else{
+            connRedis = await redis.connect();
+            await redis.sAdd(`loginUsers:${today}`, id);
+            await redis.expire(`loginUsers:${today}`, 300);
+
+            const isManager = row[0].position === "2";
+            const token = authModule.generateToken(row[0], isManager);
+            const loginCount = await redis.sCard(`loginUsers:${today}`);
+    
+            result.data.token = token;
+            result.data.loginCount = loginCount;
         }
         
-        const isManager = row[0].position === "2";
-        const token = authModule.generateToken(row[0], isManager);
-        const loginCount = await redis.sCard(`loginUsers:${today}`);
-
-        result.data.token = token;
-        result.data.loginCount = loginCount;
         result.success = true;
         req.outputData = result.success;
-
+        
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -128,7 +132,9 @@ userRouter.post('/login', async (req, res, next) => {
         if (conn){
             conn.end(); 
         }
-        redis.disconnect();
+        if (connRedis){
+            redis.disconnect();
+        }
     }
 });
 
