@@ -1,8 +1,5 @@
 require('dotenv').config(); //지우지말것...ㅠㅠ이걸 지워서 계속 오류발생했다 인수야 2시간 날렸다 이것때문에
 const express = require("express"); //자바스크립트에서 다른 자바스크립트를 인폴트 할 수 있는 기능이 node에서 만들어졌음 node_module에 있는 express를 불러오는 것
-const redis = require("redis").createClient();
-const {pool} = require('./src/config/database/databases');
-const loginCron = require("./src/module/loginCron");
 
 const app = express();  // express를 사용하기 위해 app이라는 변수에 express 모듈을 호출하는 것 이다.
 const port = 7000;
@@ -25,10 +22,6 @@ app.use('/comment', commentRouter);
 
 const logDataRouter = require("./src/router/log");
 app.use('/log', logDataRouter);
-
-
-redis.connect();
-loginCron(redis, pool);
 
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {

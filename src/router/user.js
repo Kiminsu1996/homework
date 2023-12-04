@@ -2,11 +2,11 @@ const userRouter = require('express').Router();
 const redis = require("redis").createClient();
 const moment = require('moment-timezone'); 
 const authModule = require("../module/auth");
+const loginCron = require("../module/loginCron.js");
 const {authenticateToken} = require("../middleware/authGuard.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
 const exception = require("../module/exception");
-const loginCron = require("../module/loginCron");
 const {
         maxIdLength, 
         maxPwLength, 
@@ -26,7 +26,6 @@ const {
 userRouter.post('/', async  (req, res, next) => {
     const {id, password, name, phonenumber, email, address, position } = req.body;
     let conn = null;
-
     const result = {
         "success" : false,
         "message" : null
@@ -109,7 +108,7 @@ userRouter.post('/login', async (req, res, next) => {
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
         }else{
-            connRedis = await redis.connect();
+            await redis.connect();
             await redis.sAdd(`loginUsers:${today}`, id);
             await redis.expire(`loginUsers:${today}`, 300);
 
@@ -123,7 +122,8 @@ userRouter.post('/login', async (req, res, next) => {
         
         result.success = true;
         req.outputData = result.success;
-        
+
+        loginCron(redis, pool);
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -131,9 +131,6 @@ userRouter.post('/login', async (req, res, next) => {
     } finally {
         if (conn){
             conn.end(); 
-        }
-        if (connRedis){
-            redis.disconnect();
         }
     }
 });
