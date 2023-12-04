@@ -16,7 +16,7 @@ const createManagerToken = (payload) => {
     });
 };
 
-const generateToken = (user, isManager = false) => {
+const generateToken = (user, isManager = false) => { // 실제 토큰생성
     const payload = {
         idx: user.idx,
         id: user.id,

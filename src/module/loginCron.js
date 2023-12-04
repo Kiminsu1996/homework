@@ -24,7 +24,7 @@ const loginCron = async (redis, pool) => {
                 await pool.query(updateTodayCountSql, [loginCount, today]);
             }
 
-            //else 코드를 
+            //else 코드를 밑에처럼 바꿔주자 
             // if (moment().tz('Asia/Seoul').hour() === 0 && moment().tz('Asia/Seoul').minute() === 0) { << 이렇게 해줘야 한다 24:00를 기준으로 업데이트 해야하기 때문에 
             //     const upsertSql = `
             //     INSERT INTO backend.logins (date, counts) 
@@ -33,7 +33,7 @@ const loginCron = async (redis, pool) => {
             //     DO UPDATE SET counts = EXCLUDED.counts`;
             //     await pool.query(upsertSql, [today, yesterdayCount]);
             // }
-            
+
         } catch (error) {
             console.error("loginCron error:", error);
         } finally {

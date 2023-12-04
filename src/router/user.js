@@ -110,7 +110,7 @@ userRouter.post('/login', async (req, res, next) => {
         }else{
             await redis.connect();
             await redis.sAdd(`loginUsers:${today}`, id);
-            await redis.expire(`loginUsers:${today}`, 300);
+            await redis.expire(`loginUsers:${today}`, 300); //원래는 24시간으로 하는게 맞다. 지금은 5분으로 했음.
 
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
@@ -316,7 +316,7 @@ userRouter.put('/', authenticateToken, async (req, res, next) => {
 
 //회원탈퇴
 userRouter.delete('/', authenticateToken, async (req, res, next) => {
-    const userIdx =  req.decode.idx;;
+    const userIdx =  req.decode.idx;
     let conn = null;
 
     const result = {
@@ -345,6 +345,55 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
         if (conn){
             conn.end();
         }
+    }
+});
+
+
+//검색어 저장
+userRouter.post('/serch', authenticateToken, async (req,res,next) => {
+    const {searchWord} = req.body;
+    const userId =  req.decode.id;
+
+    const result = {
+        "success" : false,
+    };
+
+    try {
+        await redis.connect();
+        const score = Date.now(); 
+        await redis.zAdd(`searches:${userId}`, { score, value: searchWord });
+        await redis.zRemRangeByRank(`searches:${userId}`, 0, -6);
+        
+        result.success = true;
+        res.send(result);
+    } catch (error) {
+        return next(error);
+    } finally{
+        redis.disconnect();
+    }
+
+});
+
+
+//최근 검색어 조회
+userRouter.get('/recent-searches', authenticateToken, async (req, res, next) => {
+    const userId = req.decode.id;
+
+    const result = {
+        "success": false,
+        "data": null
+    };
+
+    try {
+        await redis.connect();
+        const recentWords = await redis.zRange(`searches:${userId}`, 0, 4, { REV: true });
+        result.success = true;
+        result.data = recentWords;
+        res.send(result);
+    } catch (error) {
+        return next(error);
+    } finally {
+        await redis.disconnect();
     }
 });
 
