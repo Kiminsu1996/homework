@@ -93,7 +93,6 @@ logDataRouter.get('/api', authenticateManagerToken, async (req, res, next) =>{
 logDataRouter.get('/date-range', authenticateManagerToken, async (req, res, next) => {
     const {startDate, endDate} = req.query;
     let conn = null;
-    const position = req.decode.position;
 
     try {
         exception(startDate, "startDate").checkInput().checkDate();

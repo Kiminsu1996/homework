@@ -1,9 +1,9 @@
 const moment = require('moment-timezone');
 
-const loginCron = async (redis, pool) => {
+const loginCount = async (redis, pool) => {
         const yesterday = moment().tz('Asia/Seoul').subtract(1, 'days').format('YYYY-MM-DD');
         const today = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
-        
+
         try {
             const getYesterdayCountSql = "SELECT counts FROM backend.logins WHERE date = $1";
             const yesterdayCountResult = await pool.query(getYesterdayCountSql, [yesterday]);
@@ -31,14 +31,12 @@ const loginCron = async (redis, pool) => {
             //     VALUES ($1, $2)
             //     ON CONFLICT (date)
             //     DO UPDATE SET counts = EXCLUDED.counts`;
-            //     await pool.query(upsertSql, [today, yesterdayCount]);
+            //     await pool.query(upsertSql, [today, loginCount]);
             // }
 
         } catch (error) {
-            console.error("loginCron error:", error);
-        } finally {
-            redis.disconnect();
-        }
+           console.log("error : ", error);
+        } 
 };
 
-module.exports = loginCron;
+module.exports = {loginCount};

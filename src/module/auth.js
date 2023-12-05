@@ -3,14 +3,14 @@ const jwt = require("jsonwebtoken");
 require('dotenv').config();
 
 const createToken = (payload) => {
-    return jwt.sign(payload, process.env.JWT_SECRTET, {
+    return jwt.sign(payload, process.env.JWT_SECRET, {
         issuer: process.env.JWT_ISSUER,
         expiresIn: process.env.JWT_EXPIRESIN
     });
 };
 
 const createManagerToken = (payload) => {
-    return jwt.sign(payload, process.env.JWT_MANAGER_SECRTET, {
+    return jwt.sign(payload, process.env.JWT_MANAGER_SECRET, {
         issuer: process.env.JWT_MANAGER_ISSUER,
         expiresIn: process.env.JWT_MANAGER_EXPIRESIN
     });

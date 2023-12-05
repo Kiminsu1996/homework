@@ -1,9 +1,10 @@
 const userRouter = require('express').Router();
-const redis = require("redis").createClient();
 const moment = require('moment-timezone'); 
 const authModule = require("../module/auth");
-const loginCron = require("../module/loginCron.js");
+const {loginCount} = require("../module/loginCount.js");
+const getRedisClient = require("../module/redisClient.js");
 const {authenticateToken} = require("../middleware/authGuard.js");
+const {setLoginTimeout} = require("../module/loginTimer.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
 const exception = require("../module/exception");
@@ -32,7 +33,6 @@ userRouter.post('/', async  (req, res, next) => {
     };
     
     try {
-
         exception(id, "id").checkInput().checkIdRegex().checkLength(minIdLength, maxIdLength);
         exception(password, "password").checkInput().checkPwRegex().checkLength(minPwLength, maxPwLength);
         exception(name, "name").checkInput().checkNameRegex().checkLength(minNameLength, maxNameLength);
@@ -82,6 +82,7 @@ userRouter.post('/', async  (req, res, next) => {
 userRouter.post('/login', async (req, res, next) => {
     const {id, password} = req.body;
     const today = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
+    const redis = getRedisClient();
     let conn = null;
 
     const result = {
@@ -96,8 +97,11 @@ userRouter.post('/login', async (req, res, next) => {
     try {
         exception(id, "id").checkInput().checkIdRegex().checkLength(minIdLength, maxIdLength);
         exception(password, "password").checkInput().checkPwRegex().checkLength(minPwLength, maxPwLength);
-
         conn = await pool.connect();
+
+        if (!redis.isOpen) {
+            await redis.connect();
+        }
 
         //로그인 쿼리문
         const sql = "SELECT * FROM backend.information WHERE id = $1 AND password = $2";
@@ -107,23 +111,26 @@ userRouter.post('/login', async (req, res, next) => {
 
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
-        }else{
-            await redis.connect();
+        }else{  
             await redis.sAdd(`loginUsers:${today}`, id);
             await redis.expire(`loginUsers:${today}`, 300); //원래는 24시간으로 하는게 맞다. 지금은 5분으로 했음.
-
+            
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
             const loginCount = await redis.sCard(`loginUsers:${today}`);
-    
+            await redis.set(`userToken:${id}`, token);
+
             result.data.token = token;
             result.data.loginCount = loginCount;
         }
         
+        setLoginTimeout(() => {
+            loginCount(redis, pool);
+        }, 299000); // 4분59초에 저장 
+
         result.success = true;
         req.outputData = result.success;
-
-        loginCron(redis, pool);
+        
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -192,7 +199,6 @@ userRouter.post('/find-id',  async (req, res, next) => {
     };
 
     try {
-
         exception(name, "name").checkInput().checkNameRegex().checkLength(minNameLength, maxNameLength);
         exception(phonenumber, "phonenumber").checkInput().checkPhoneRegex().checkLength(minPhonenumberLength, maxPhonenumberLength);
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
@@ -353,13 +359,16 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
 userRouter.post('/serch', authenticateToken, async (req,res,next) => {
     const {searchWord} = req.body;
     const userId =  req.decode.id;
+    const redis = getRedisClient();
 
     const result = {
         "success" : false,
     };
 
     try {
-        await redis.connect();
+        if (!redis.isOpen) {
+            await redis.connect();
+        }
         const score = Date.now(); 
         await redis.zAdd(`searches:${userId}`, { score, value: searchWord });
         await redis.zRemRangeByRank(`searches:${userId}`, 0, -6);
@@ -378,6 +387,7 @@ userRouter.post('/serch', authenticateToken, async (req,res,next) => {
 //최근 검색어 조회
 userRouter.get('/recent-searches', authenticateToken, async (req, res, next) => {
     const userId = req.decode.id;
+    const redis = getRedisClient();
 
     const result = {
         "success": false,
@@ -385,7 +395,9 @@ userRouter.get('/recent-searches', authenticateToken, async (req, res, next) => 
     };
 
     try {
-        await redis.connect();
+        if (!redis.isOpen) {
+            await redis.connect();
+        }
         const recentWords = await redis.zRange(`searches:${userId}`, 0, 4, { REV: true });
         result.success = true;
         result.data = recentWords;
