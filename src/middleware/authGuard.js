@@ -20,10 +20,11 @@ const authenticateToken = async (req, res, next) => {
             await redis.connect();
         }
 
-        const redisToken = await redis.get(`userToken:${id}`);
+        const redisTokens = await redis.lRange(`userToken:${id}`, 0, 0); 
+        const redisToken = redisTokens.length > 0 ? redisTokens[0] : null; 
 
         if (token !== redisToken) {
-            await redis.del(`userToken:${id}`);
+            await redis.lRem(`userToken:${id}`,1 , token);
             throw new Error("중복 로그인 입니다. 로그아웃 합니다.");
         }
 
@@ -37,22 +38,23 @@ const authenticateToken = async (req, res, next) => {
 const authenticateManagerToken = async (req, res, next) => {
     const token = req.headers.token;
     const redis = getRedisClient();
-
+    
     try {
         if(!token) {
             throw new Error("no token");
         }
         const decoded = jwt.verify(token, process.env.JWT_MANAGER_SECRET);  
         const id = decoded.id; 
-        
+
         if (!redis.isOpen) {
             await redis.connect();
         }
         
-        const redisToken = await redis.get(`userToken:${id}`);
+        const redisTokens = await redis.lRange(`userToken:${id}`, 0, 0); 
+        const redisToken = redisTokens.length > 0 ? redisTokens[0] : null; 
 
         if (token !== redisToken) {
-            await redis.del(`userToken:${id}`);
+            await redis.lRem(`userToken:${id}`,1 , token);
             throw new Error("중복 로그인 입니다. 로그아웃 합니다.");
         }
 

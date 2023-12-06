@@ -118,7 +118,7 @@ userRouter.post('/login', async (req, res, next) => {
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
             const loginCount = await redis.sCard(`loginUsers:${today}`);
-            await redis.set(`userToken:${id}`, token);
+            await redis.lPush(`userToken:${id}`, token);  //list collection 사용
 
             result.data.token = token;
             result.data.loginCount = loginCount;
