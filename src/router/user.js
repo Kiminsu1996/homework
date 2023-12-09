@@ -4,7 +4,6 @@ const authModule = require("../module/auth");
 const {loginCount} = require("../module/loginCount.js");
 const getRedisClient = require("../module/redisClient.js");
 const {authenticateToken} = require("../middleware/authGuard.js");
-const {setLoginTimeout} = require("../module/loginTimer.js");
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
 const exception = require("../module/exception");
@@ -82,6 +81,9 @@ userRouter.post('/', async  (req, res, next) => {
 userRouter.post('/login', async (req, res, next) => {
     const {id, password} = req.body;
     const today = moment().tz('Asia/Seoul').format('YYYY-MM-DD');
+    const now = moment().tz('Asia/Seoul');
+    const midnight = moment().tz('Asia/Seoul').endOf('day');
+    const secondsUntilMidnight = midnight.diff(now, 'seconds');
     const redis = getRedisClient();
     let conn = null;
 
@@ -90,7 +92,8 @@ userRouter.post('/login', async (req, res, next) => {
         "message" : null,
         "data" :{
             "token" : null,
-            "loginCount" : null
+            "loginCount" : null,
+            "totalCount" : null,
         }
     };
 
@@ -113,24 +116,25 @@ userRouter.post('/login', async (req, res, next) => {
             throw new Error("회원 정보가 없습니다.")
         }else{  
             await redis.sAdd(`loginUsers:${today}`, id);
-            await redis.expire(`loginUsers:${today}`, 300); //원래는 24시간으로 하는게 맞다. 지금은 5분으로 했음.
+            await redis.expire(`loginUsers:${today}`, secondsUntilMidnight); //원래는 24시간으로 하는게 맞다. 지금은 5분으로 했음. 24h x 60m x 60s
             
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
             const loginCount = await redis.sCard(`loginUsers:${today}`);
             await redis.lPush(`userToken:${id}`, token);  //list collection 사용 / hash로 하는게 맞다 원래 
 
+            const totalCountSql = "SELECT SUM(counts) AS total FROM backend.logins";
+            const totalCountResult = await pool.query(totalCountSql);
+            const totalCount = parseInt(totalCountResult.rows[0].total);
+            
             result.data.token = token;
             result.data.loginCount = loginCount;
+            result.data.totalCount = totalCount;
         }
         
-        setLoginTimeout(() => {
-            loginCount(redis, pool);
-        }, 299000); // 4분59초에 저장 
-
+        loginCount(redis, pool);
         result.success = true;
         req.outputData = result.success;
-        
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -300,8 +304,6 @@ userRouter.put('/', authenticateToken, async (req, res, next) => {
         const data = [id, password, name, phonenumber, email, address, position, userIdx];
         const updateResult = await pool.query(updateSql, data);
 
-        console.log()
-
         if(updateResult.rowCount < 1){
             throw new Error("회원 정보 수정 실패");
         }
@@ -355,59 +357,6 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
 });
 
 
-//검색어 저장
-userRouter.post('/serch', authenticateToken, async (req,res,next) => {
-    const {searchWord} = req.body;
-    const userId =  req.decode.id;
-    const redis = getRedisClient();
-
-    const result = {
-        "success" : false,
-    };
-
-    try {
-        if (!redis.isOpen) {
-            await redis.connect();
-        }
-        const score = Date.now(); 
-        await redis.zAdd(`searches:${userId}`, { score, value: searchWord });
-        await redis.zRemRangeByRank(`searches:${userId}`, 0, -6);
-        
-        result.success = true;
-        res.send(result);
-    } catch (error) {
-        return next(error);
-    } finally{
-        redis.disconnect();
-    }
-
-});
-
-
-//최근 검색어 조회
-userRouter.get('/recent-searches', authenticateToken, async (req, res, next) => {
-    const userId = req.decode.id;
-    const redis = getRedisClient();
-
-    const result = {
-        "success": false,
-        "data": null
-    };
-
-    try {
-        if (!redis.isOpen) {
-            await redis.connect();
-        }
-        const recentWords = await redis.zRange(`searches:${userId}`, 0, 4, { REV: true });
-        result.success = true;
-        result.data = recentWords;
-        res.send(result);
-    } catch (error) {
-        return next(error);
-    } finally {
-        await redis.disconnect();
-    }
-});
 
 module.exports = userRouter;  // module.exports는 common js 모듈에서 사용된다. userRouter를 다른 파일에서 사용할 수 있도록 하는 역할  
 

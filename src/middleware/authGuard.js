@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const getRedisClient = require("../module/redisClient.js");
 require('dotenv').config();
 
-
 const authenticateToken = async (req, res, next) => {
     const token = req.headers.token;
     const redis = getRedisClient();

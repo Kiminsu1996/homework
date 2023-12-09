@@ -23,6 +23,9 @@ app.use('/comment', commentRouter);
 const logDataRouter = require("./src/router/log");
 app.use('/log', logDataRouter);
 
+const searchRouter = require("./src/router/search");
+app.use('/search', searchRouter);
+
 //서버애러 처리  > 쓰레기통 역할 
 app.use((error, req, res, next) => {
     console.log(error);
