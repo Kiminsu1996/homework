@@ -21,7 +21,6 @@ const {
         minEmailLength,
         minAddressLength } = require('../module/lengths');
 
-
 // 회원가입
 userRouter.post('/', async  (req, res, next) => {
     const {id, password, name, phonenumber, email, address, position } = req.body;
@@ -116,7 +115,7 @@ userRouter.post('/login', async (req, res, next) => {
             throw new Error("회원 정보가 없습니다.")
         }else{  
             await redis.sAdd(`loginUsers:${today}`, id);
-            await redis.expire(`loginUsers:${today}`, secondsUntilMidnight); //원래는 24시간으로 하는게 맞다. 지금은 5분으로 했음. 24h x 60m x 60s
+            await redis.expire(`loginUsers:${today}`, secondsUntilMidnight); //24:00 시까지 남은 시간을 저장했음.
             
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
@@ -126,13 +125,12 @@ userRouter.post('/login', async (req, res, next) => {
             const totalCountSql = "SELECT SUM(counts) AS total FROM backend.logins";
             const totalCountResult = await pool.query(totalCountSql);
             const totalCount = parseInt(totalCountResult.rows[0].total);
-            
+
             result.data.token = token;
             result.data.loginCount = loginCount;
             result.data.totalCount = totalCount;
         }
-        
-        loginCount(redis, pool);
+        loginCount(redis);
         result.success = true;
         req.outputData = result.success;
         logMiddleware(req, res, next);
@@ -355,8 +353,6 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
         }
     }
 });
-
-
 
 module.exports = userRouter;  // module.exports는 common js 모듈에서 사용된다. userRouter를 다른 파일에서 사용할 수 있도록 하는 역할  
 

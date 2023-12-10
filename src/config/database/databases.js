@@ -9,7 +9,7 @@ const db = {
     port : process.env.DB_PORT
 };
 
-const url = 'mongodb://localhost:27017';
+const url = 'mongodb://0.0.0.0:27017';
 
 const pool = new Pool(db);
 const client = new MongoClient(url);   //몽고DB는 기본적으로 Pool 방법이다.
