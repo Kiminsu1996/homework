@@ -113,7 +113,7 @@ userRouter.post('/login', async (req, res, next) => {
 
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
-        }else{  
+        }else{
             await redis.sAdd(`loginUsers:${today}`, id);
             await redis.expire(`loginUsers:${today}`, secondsUntilMidnight); //24:00 시까지 남은 시간을 저장했음.
             
@@ -121,15 +121,16 @@ userRouter.post('/login', async (req, res, next) => {
             const token = authModule.generateToken(row[0], isManager);
             const loginCount = await redis.sCard(`loginUsers:${today}`);
             await redis.lPush(`userToken:${id}`, token);  //list collection 사용 / hash로 하는게 맞다 원래 
-
+    
             const totalCountSql = "SELECT SUM(counts) AS total FROM backend.logins";
             const totalCountResult = await pool.query(totalCountSql);
             const totalCount = parseInt(totalCountResult.rows[0].total);
-
+    
             result.data.token = token;
             result.data.loginCount = loginCount;
             result.data.totalCount = totalCount;
         }
+    
         loginCount(redis);
         result.success = true;
         req.outputData = result.success;
@@ -335,7 +336,7 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
 
         const deleteUser = await pool.query("DELETE FROM backend.information WHERE idx = $1", [userIdx]);
 
-        if(deleteUser.rowCount < 1){
+        if(!deleteUser.rowCount){
             throw new Error("회원탈퇴 실패"); 
         }
 

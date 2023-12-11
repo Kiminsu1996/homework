@@ -97,16 +97,16 @@ postRouter.get('/:board_idx', async (req, res, next) => {
 
     try {
         //게시판 체크
-        if ( !boardIdx || boardIdx === "") {
+        if (!boardIdx) {
             throw new Error("해당 게시글이 없습니다.");
         }
 
         conn = await pool.connect();
 
         //특정 게시글 보기 
-        const searchUserPosts = " SELECT * FROM backend.board WHERE board_idx = $1";
+        const searchUserPosts = "SELECT * FROM backend.board WHERE board_idx = $1";
         const userPosts = await pool.query(searchUserPosts, [boardIdx]);
-        const row = userPosts.rows
+        const row = userPosts.rows;
 
         if( row.length > 0 ){
             result.success = true;

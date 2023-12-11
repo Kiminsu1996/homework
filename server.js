@@ -37,7 +37,7 @@ app.use((error, req, res, next) => {
 });
 
 
-app.listen(port, () => {
+app.listen(port, '0.0.0.0', () => {
     console.log(`${port}번에서 http 웹서버 실행`);
 }) ;
 

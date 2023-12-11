@@ -10,7 +10,7 @@ logDataRouter.get('/logs/:order', authenticateManagerToken , async (req, res, ne
 
     try {
         conn = await client.connect();
-
+        
         switch (req.params.order) {
             case '1':
                 order = 1;
@@ -24,7 +24,7 @@ logDataRouter.get('/logs/:order', authenticateManagerToken , async (req, res, ne
 
         const logs = await conn.db("logging").collection("data").find({}).sort({"timestamp" : order}).toArray();
 
-        if(logs.length < 1){
+        if(!logs.length){
             throw new Error("등록된 데이터가 없습니다.");
         }
 

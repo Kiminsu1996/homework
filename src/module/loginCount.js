@@ -17,4 +17,4 @@ const loginCount = async (redis) => {
     });
 };
 
-module.exports = {loginCount};
+module.exports = { loginCount };
