@@ -1,35 +1,46 @@
 const postRouter = require('express').Router();
-const {authenticateToken} = require("../middleware/authGuard.js");
+const {authenticateToken} = require('../middleware/authGuard.js');
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
 const exception = require("../module/exception");
-const {maxTitle, maxText, minTitle, minText} = require("../module/lengths");
+const s3 = require('../config/awsConfig');
+const upload = require('../middleware/upload.js');
+const {maxTitle, maxText, minTitle, minText} = require('../module/lengths');
 
 //게시글 작성
-postRouter.post('/',authenticateToken, async (req, res, next) => {
+postRouter.post('/',authenticateToken, upload.array('files', 5), async (req, res, next) => {
     const { title, text } = req.body;
     const userIdx =  req.decode.idx;
     let conn = null;
+    let fileUrls = [];
 
     const result = {
         "success" : false,
         "message" : null
     };
-
+    
     try {
         exception(title, "title").checkInput().checkLength(minTitle, maxTitle);
         exception(text, "text").checkInput().checkLength(minText, maxText);
+        
+        if(req.files){ //files가 있으면 실행 
+            req.files.forEach(async file => {
+                const params = {
+                    Bucket: 'kiminsu1996', //s3의 버킷 이름 
+                    Key: `${Date.now()}_${file.originalname}`, //s3에 저장되는 이름 
+                    Body: file.buffer //s3에 저장될 파일 내용 
+                };
+                const uploadResult = await s3.upload(params).promise();
+                fileUrls.push(uploadResult.Location);
+            });
+        }
 
         conn = await pool.connect();
 
         //게시글 작성 
-        const sql = "INSERT INTO backend.board (idx,title,content) VALUES($1, $2, $3)";
-        const data = [userIdx, title, text];
-        const makePost = await pool.query(sql, data);
-
-        if(makePost.rowCount < 1){  // 이부분은 INSERT 가 안되면 DB에러가 발생하기 때문에 자동으로 catch로 가기 때문에 이렇게 예외처리 안해줘도 된다.
-            throw new Error ("게시판 작성 실패");
-        }
+        const sql = "INSERT INTO backend.board (idx,title,content,urls) VALUES($1, $2, $3, $4)";
+        const data = [userIdx, title, text, fileUrls.join(",")];
+        await pool.query(sql, data);
 
         result.success = true;
         req.outputData = result.success;
@@ -46,7 +57,7 @@ postRouter.post('/',authenticateToken, async (req, res, next) => {
 });
 
 //전체 게시글 보기
-postRouter.get('/all',  async (req, res, next) => {  //여기도 로그인 체크는 미들웨어에서 하는걸로 했음
+postRouter.get('/all',  async (req, res, next) => {  
     let conn = null;
 
     const result = {
