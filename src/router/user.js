@@ -64,7 +64,6 @@ userRouter.post('/', async  (req, res, next) => {
         await pool.query(sql,data);
         req.outputData = result.success;
         result.success = true;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -177,7 +176,6 @@ userRouter.get('/', authenticateToken, async (req, res, next) => {
         result.success = true;
         result.data = row;
         req.outputData = result.data;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -207,7 +205,6 @@ userRouter.post('/find-id',  async (req, res, next) => {
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
 
         conn = await pool.connect();
-        
         const sql = "SELECT id FROM backend.information WHERE name = $1 AND phonenumber = $2 AND email = $3";
         const data = [name, phonenumber, email];
         const userId = await pool.query(sql, data);
@@ -220,7 +217,6 @@ userRouter.post('/find-id',  async (req, res, next) => {
         result.success = true ;
         result.data = row;
         req.outputData = result.data;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -251,7 +247,6 @@ userRouter.post('/find-pw',  async (req, res, next) => {
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
 
         conn = await pool.connect();
-    
         const sql = "SELECT password FROM backend.information WHERE id = $1 AND name = $2 AND phonenumber = $3 AND email = $4 ";
         const data = [id, name, phonenumber, email];
         const userPw = await pool.query(sql, data);
@@ -260,10 +255,10 @@ userRouter.post('/find-pw',  async (req, res, next) => {
         if(row.length < 1){
             throw new Error ("비밀번호 찾기 실패");
         }
+
         result.success = true;
         result.data = row;
         req.outputData = result.data;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -309,7 +304,6 @@ userRouter.put('/', authenticateToken, async (req, res, next) => {
 
         result.success = true;
         req.outputData = result.success;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -333,7 +327,6 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
 
     try {
         conn = await pool.connect();
-
         const deleteUser = await pool.query("DELETE FROM backend.information WHERE idx = $1", [userIdx]);
 
         if(!deleteUser.rowCount){
@@ -343,7 +336,6 @@ userRouter.delete('/', authenticateToken, async (req, res, next) => {
         result.success = true;
         result.message = "회원탈퇴 되었습니다.";
         req.outputData = result.success;
-
         logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
