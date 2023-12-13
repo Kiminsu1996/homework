@@ -1,25 +1,25 @@
 const userRouter = require('express').Router();
 const moment = require('moment-timezone'); 
-const authModule = require("../module/auth");
-const {loginCount} = require("../module/loginCount.js");
-const getRedisClient = require("../module/redisClient.js");
-const {authenticateToken} = require("../middleware/authGuard.js");
+const authModule = require('../module/auth');
+const {loginCount} = require('../module/loginCount.js');
+const getRedisClient = require('../module/redisClient.js');
+const {authenticateToken} = require('../middleware/authGuard.js');
 const {pool} = require('../config/database/databases');
 const {logMiddleware} = require('../module/logging');
-const exception = require("../module/exception");
+const exception = require('../module/exception');
 const {
-        maxIdLength, 
-        maxPwLength, 
-        maxNameLength, 
-        maxPhonenumberLength, 
-        maxEmailLength, 
-        maxAddressLength,
-        minIdLength,
-        minPwLength,
-        minNameLength,
-        minPhonenumberLength,
-        minEmailLength,
-        minAddressLength } = require('../module/lengths');
+    maxIdLength, 
+    maxPwLength, 
+    maxNameLength, 
+    maxPhonenumberLength, 
+    maxEmailLength, 
+    maxAddressLength,
+    minIdLength,
+    minPwLength,
+    minNameLength,
+    minPhonenumberLength,
+    minEmailLength,
+    minAddressLength } = require('../module/lengths');
 
 // 회원가입
 userRouter.post('/', async  (req, res, next) => {
@@ -44,18 +44,18 @@ userRouter.post('/', async  (req, res, next) => {
         // 아이디, 이메일 중복체크
         const checkId = "SELECT id FROM backend.information WHERE id = $1";
         const findSameId = await pool.query(checkId, [id]);
-        const rowId = findSameId.rows
+        const rowId = findSameId.rows;
 
         const checkEmail = "SELECT id FROM backend.information WHERE email = $1";
         const findSameEmail = await pool.query(checkEmail, [email]);
-        const rowEmail = findSameEmail.rows
+        const rowEmail = findSameEmail.rows;
 
         if(rowId.length > 0){
-            throw new Error("중복된 아이디 입니다.")
+            throw new Error("중복된 아이디 입니다.");
         }
 
         if(rowEmail.length > 0){
-            throw new Error("중복된 이메일 입니다.")
+            throw new Error("중복된 이메일 입니다.");
         }
         
         const sql = 'INSERT INTO backend.information (id, password, name, email, phonenumber, address, position) VALUES($1, $2, $3, $4, $5, $6, $7)';
@@ -108,7 +108,7 @@ userRouter.post('/login', async (req, res, next) => {
         const sql = "SELECT * FROM backend.information WHERE id = $1 AND password = $2";
         const data = [id, password];
         const user = await pool.query(sql, data);
-        const row = user.rows
+        const row = user.rows;
 
         if(row.length < 1){
             throw new Error("회원 정보가 없습니다.")
@@ -130,7 +130,7 @@ userRouter.post('/login', async (req, res, next) => {
             result.data.totalCount = totalCount;
         }
     
-        loginCount(redis);
+        loginCount();
         result.success = true;
         req.outputData = result.success;
         logMiddleware(req, res, next);
@@ -247,7 +247,7 @@ userRouter.post('/find-pw',  async (req, res, next) => {
         exception(email, "email").checkInput().checkEmailRegex().checkLength(minEmailLength, maxEmailLength);
 
         conn = await pool.connect();
-        const sql = "SELECT password FROM backend.information WHERE id = $1 AND name = $2 AND phonenumber = $3 AND email = $4 ";
+        const sql = "SELECT password FROM backend.information WHERE id = $1 AND name = $2 AND phonenumber = $3 AND email = $4";
         const data = [id, name, phonenumber, email];
         const userPw = await pool.query(sql, data);
         const row = userPw.rows
