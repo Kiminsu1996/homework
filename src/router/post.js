@@ -20,12 +20,18 @@ postRouter.post('/',authenticateToken, upload.array('files', 5), async (req, res
     };
     
     try {
-        exception(title, "title").checkInput().checkLength(minTitle, maxTitle);
+        exception(title, "title").checkInput().checkLength(minTitle, maxTitle); //이 예외처리도 미들웨어서 체크하는 방식으로 하는게 좋을 것 같다.
         exception(text, "text").checkInput().checkLength(minText, maxText);
         
         //첨부 파일이 있으면 실행
         if (req.files) {  
             fileUrls = await Promise.all(req.files.map(file => uploadFile(file)));
+            
+            req.files.forEach(file => {
+                const extension = file.originalname.split('.').pop();
+                console.log(`File extension: ${extension}`);
+            });
+            
         }
         // map은 동기함수이기 때문에 비동기 작업을 기다리지 않고 넘어가서 promis.all 함수를 사용해야한다.
         // promis.all => 비동기 작업을 병렬로 처리하고 작업이 끝날 때까지 기다리는 역할을 한다.
@@ -37,7 +43,7 @@ postRouter.post('/',authenticateToken, upload.array('files', 5), async (req, res
         conn = await pool.connect();
 
         //게시글 작성 
-        const sql = "INSERT INTO backend.board (idx,title,content,urls) VALUES($1, $2, $3, $4)";
+        const sql = "INSERT INTO backend.board (idx,title,content,urls) VALUES($1, $2, $3, $4)";  
         const data = [userIdx, title, text, fileUrls.join(",")];
         await pool.query(sql, data);
 
@@ -54,6 +60,14 @@ postRouter.post('/',authenticateToken, upload.array('files', 5), async (req, res
         }
     }
 });
+
+// 위 게시판 만들기 api를 수정해야되는데 어떤 부분을 수정해되냐 
+// 테이블을 하나 만들어서 첨부파일만 저장되게 만든다. 이때
+// board_idx를 fk로 받고 파일이름이랑, url 경로를 저장하게한다. 파일타입도
+// 예) 테이블이름 attachment
+// attachment_idx | idx | type | url  << 이런식으로
+// 위 테이블의 idx 는 board의 idx와 연결 
+// 
 
 //전체 게시글 보기
 postRouter.get('/all',  async (req, res, next) => {  
