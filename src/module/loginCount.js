@@ -8,7 +8,7 @@ const loginCount = async () => {
     const today = now.format('YYYY-MM-DD');
     const redis = getRedisClient();
     
-    cron.schedule('59 23 * * *', async () => {
+    cron.schedule('58 23 * * *', async () => {
         try {
             if (!redis.isOpen) {
                 await redis.connect();

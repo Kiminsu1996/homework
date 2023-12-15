@@ -115,7 +115,7 @@ userRouter.post('/login', async (req, res, next) => {
         }else{
             await redis.sAdd(`loginUsers:${today}`, id);
             await redis.expire(`loginUsers:${today}`, secondsUntilMidnight); //24:00 시까지 남은 시간을 저장했음.
-            
+    
             const isManager = row[0].position === "2";
             const token = authModule.generateToken(row[0], isManager);
             const loginCount = await redis.sCard(`loginUsers:${today}`);

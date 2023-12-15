@@ -1,7 +1,8 @@
 const { s3, DeleteObjectCommand, PutObjectCommand } = require('../config/awsConfig');
+const { v4: uuidv4} = require("uuid");
 
 async function uploadFile(file) {
-    const key = `${Date.now()}_${file.originalname}`;
+    const key = `${uuidv4()}_${file.originalname}`;
     const params = {
         Bucket: 'kiminsu1996',  
         Key: key,  
