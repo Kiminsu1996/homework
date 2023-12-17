@@ -54,7 +54,6 @@ postRouter.post('/',authenticateToken, uploadGuard.array('files', 5), async (req
 
         result.success = true;
         req.outputData = result.success;
-
         logMiddleware(req, res);
         res.send(result);
     } catch (error) {
@@ -87,7 +86,8 @@ postRouter.get('/all',  async (req, res, next) => {
             backend.information.id, 
             backend.board.title,
             string_agg(backend.upload.urls, ',') AS urls,
-            string_agg(backend.upload.type, ',') AS types
+            string_agg(backend.upload.type, ',') AS types,
+            array_agg(backend.upload.upload_idx) AS upload_idx
         FROM 
             backend.information 
         INNER JOIN 
@@ -113,7 +113,7 @@ postRouter.get('/all',  async (req, res, next) => {
             title: row.title,
             upload: row.urls ? row.urls.split(',').map((url, index) => {
                 return {
-                    order: index, 
+                    upload_idx: row.upload_idx[index], 
                     url: url,
                     type: row.types.split(',')[index] 
                 };
@@ -123,7 +123,6 @@ postRouter.get('/all',  async (req, res, next) => {
         result.success = true;
         result.data = uploadData;
         req.outputData = result.success;
-
         await logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -162,7 +161,8 @@ postRouter.get('/:board_idx', async (req, res, next) => {
                 backend.board.title, 
                 backend.board.content,
                 COALESCE(string_agg(backend.upload.urls, ','), '') AS urls,
-                COALESCE(string_agg(backend.upload.type, ','), '') AS type
+                COALESCE(string_agg(backend.upload.type, ','), '') AS type,
+                array_agg(backend.upload.upload_idx) AS upload_idx
             FROM 
                 backend.board
             LEFT JOIN 
@@ -184,17 +184,18 @@ postRouter.get('/:board_idx', async (req, res, next) => {
             board_idx: row.board_idx,
             title: row.title,
             content: row.content,
-            upload: row.urls ? row.urls.split(',').map((url, index) => ({
-                order: index,
-                url: url,
-                type: row.type.split(',')[index]
-            })) : []
+            upload: row.urls ? row.urls.split(',').map((url, index) => {
+                return {
+                    upload_idx: row.upload_idx[index],
+                    url: url,
+                    type: row.type.split(',')[index]
+                };
+            }) : []
         }));
 
         result.success = true;
         result.data = postData;
         req.outputData = result.data;
-
         await logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -208,7 +209,8 @@ postRouter.get('/:board_idx', async (req, res, next) => {
 
 //게시글 수정 
 postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req, res, next) => {
-    const{ board_idx, title, text, deleteFiles } = req.body;
+    const{ board_idx, title, text } = req.body;
+    let deleteFiles = req.body.deleteFile;
     const userIdx =  req.decode.idx;
     let conn = null;
     let existingUrls = [];
@@ -237,26 +239,34 @@ postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req
         }
 
          //기존에 저장된 file이 있는지 찾기 
-         const checkExistingFile = "SELECT urls FROM backend.upload WHERE idx = $1";
-         const checkExistingFileResult = await pool.query(checkExistingFile, [board_idx]);
+        const checkExistingFile = "SELECT urls FROM backend.upload WHERE idx = $1";
+        const checkExistingFileResult = await pool.query(checkExistingFile, [board_idx]);
  
-         if(checkExistingFileResult.rows.length){
+        if(checkExistingFileResult.rows.length){
              existingUrls = checkExistingFileResult.rows[0].urls.split(",");  
-         }
-         
+        }
+        
+        // 타입 변환 string -> integer
+        if (typeof deleteFiles === 'string') {
+            deleteFiles = deleteFiles.split(',').map(str => parseInt(str.trim()));
+        }
+
          //s3에서 파일 삭제 및 DB에서 upload 된 파일 삭제 
-         if(deleteFiles){
-             const deleteS3File = deleteFiles.split(",");
-             const deletePromises = deleteS3File.map(url => deleteFile(url));
-             await Promise.all(deletePromises);
- 
-             const deleteDbUrls = deleteS3File.map(file => {
-                 const fullUrl = `https://kiminsu1996.s3.ap-northeast-2.amazonaws.com/${file}`;
-                 return pool.query(`DELETE FROM backend.upload WHERE urls = $1`, [fullUrl]);
-             });
-             await Promise.all(deleteDbUrls);
-             existingUrls = existingUrls.filter(url => !deleteS3File.includes(url)); // existingUrls 변수에 삭제한 파일을 제외한 것들을 저장 
-         }
+        if(deleteFiles){
+            const startDeleteFile = deleteFiles.map(async uploadIdx => {
+                const selectUrlQuery = "SELECT urls FROM backend.upload WHERE upload_idx = $1";
+                const selectResult = await pool.query(selectUrlQuery, [uploadIdx]);
+                const fileUrl = selectResult.rows[0]?.urls;
+
+                // S3에서 파일 삭제
+                await deleteFile(fileUrl);
+
+                //DB에서 파일 삭제
+                const deleteQuery = "DELETE FROM backend.upload WHERE upload_idx = $1";
+                return pool.query(deleteQuery, [uploadIdx]);
+            });
+            await Promise.all(startDeleteFile);
+        }
         
         //새로운 파일 업로드 
         if (req.files) {
@@ -276,7 +286,6 @@ postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req
 
         result.success = true;
         req.outputData = result.success;
-
         await logMiddleware(req, res, next);
         res.send(result);
     } catch (error) {
@@ -317,11 +326,10 @@ postRouter.delete('/',authenticateToken,  async (req, res, next) =>{
         if(!deleteBoard.rowCount){
             throw new Error ("삭제할 게시글이 없습니다.");
         }
-        
+
         //S3에서 파일 삭제 
         const files = urls.map(url => deleteFile(url));
         await Promise.all(files);
-        
         result.success = true;
         req.outputData = result.success;
         await logMiddleware(req, res, next);
@@ -334,7 +342,6 @@ postRouter.delete('/',authenticateToken,  async (req, res, next) =>{
         }
     }
 });
-
 
 module.exports = postRouter;
 

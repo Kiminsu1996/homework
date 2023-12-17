@@ -129,7 +129,7 @@ userRouter.post('/login', async (req, res, next) => {
             result.data.loginCount = loginCount;
             result.data.totalCount = totalCount;
         }
-    
+
         loginCount();
         result.success = true;
         req.outputData = result.success;
@@ -143,7 +143,6 @@ userRouter.post('/login', async (req, res, next) => {
         }
     }
 });
-
 
 //로그아웃
 userRouter.post("/logout", async (req, res, next) => {
@@ -186,7 +185,6 @@ userRouter.get('/', authenticateToken, async (req, res, next) => {
         }
     }
 });
-
 
 //아이디 찾기
 userRouter.post('/find-id',  async (req, res, next) => {
