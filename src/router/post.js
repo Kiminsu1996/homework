@@ -32,7 +32,7 @@ postRouter.post('/',authenticateToken, uploadGuard.array('files', 5), async (req
         const boardIdx = boardResult.rows[0].board_idx; // 게시글의 idx를 가져옵니다.
         
         // 파일 정보를 upload 테이블에 저장
-        if ( req.files ) {
+        if (req.files) {
             const uploadPromises = req.files.map(file => uploadFile(file));
             fileUrls = await Promise.all(uploadPromises);
         // map은 동기함수이기 때문에 비동기 작업을 기다리지 않고 넘어가서 promis.all 함수를 사용해야한다.
@@ -65,14 +65,6 @@ postRouter.post('/',authenticateToken, uploadGuard.array('files', 5), async (req
         }
     }
 });
-
-// 위 게시판 만들기 api를 수정해야되는데 어떤 부분을 수정해되냐 
-// 테이블을 하나 만들어서 첨부파일만 저장되게 만든다. 이때
-// board_idx를 fk로 받고 파일이름이랑, url 경로를 저장하게한다. 파일타입도
-// 예) 테이블이름 attachment
-// attachment_idx | idx | type | url  << 이런식으로
-// 위 테이블의 idx 는 board의 idx와 연결 
-// 
 
 //전체 게시글 보기
 postRouter.get('/all',  async (req, res, next) => {  
@@ -183,25 +175,24 @@ postRouter.get('/:board_idx', async (req, res, next) => {
         const userPosts = await pool.query(searchUserPost, [boardIdx]);
         const row = userPosts.rows;
     
-        if (row.length > 0) {
-            const postData = row.map(row => ({
-                idx: row.idx,
-                board_idx: row.board_idx,
-                title: row.title,
-                content: row.content,
-                upload: row.urls ? row.urls.split(',').map((url, index) => ({
-                    order: index,
-                    url: url,
-                    type: row.type.split(',')[index]
-                })) : []
-            }));
-
-            result.success = true;
-            result.data = postData[0];
-        }else{
+        if(!row.length){
             throw new Error("해당 게시글이 없습니다.");
         }
-         
+
+        const postData = row.map(row => ({
+            idx: row.idx,
+            board_idx: row.board_idx,
+            title: row.title,
+            content: row.content,
+            upload: row.urls ? row.urls.split(',').map((url, index) => ({
+                order: index,
+                url: url,
+                type: row.type.split(',')[index]
+            })) : []
+        }));
+
+        result.success = true;
+        result.data = postData;
         req.outputData = result.data;
 
         await logMiddleware(req, res, next);
@@ -220,7 +211,6 @@ postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req
     const{ board_idx, title, text, deleteFiles } = req.body;
     const userIdx =  req.decode.idx;
     let conn = null;
-    let newFileUrls = [];
     let existingUrls = [];
 
     const result = {
@@ -237,21 +227,37 @@ postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req
             throw new Error ("게시글을 찾을 수 없습니다.");
         }
         
-        //기존에 저장된 file이 있는지 찾기 
-        const checkExistingFile = "SELECT urls FROM backend.upload WHERE idx = $1";
-        const checkExistingFileResult = await pool.query(checkExistingFile, [board_idx]);
-        existingUrls = checkExistingFileResult.rows[0].urls ? checkExistingFileResult.rows[0].urls.split(",") : null;  
-        
-        //s3에서 파일 삭제 및 DB에서 upload 된 파일 삭제 
-        if( deleteFiles ){
-            const deleteS3File = deleteFiles.split(",");
-            const deletePromises = deleteS3File.map(url => deleteFile(url));
-            await Promise.all(deletePromises);
-            await pool.query(`DELETE FROM backend.upload WHERE urls = $1`, [deleteFiles]);
-            existingUrls = existingUrls.filter(url => !deleteS3File.includes(url));
-            
+        //게시판 수정
+        conn = await pool.connect();
+        const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4";
+        const updateResult = await pool.query(updatePost, [title, text, board_idx, userIdx]);
+    
+        if(!updateResult.rowCount){
+            throw new Error("잘못된 게시글 입니다.");
         }
 
+         //기존에 저장된 file이 있는지 찾기 
+         const checkExistingFile = "SELECT urls FROM backend.upload WHERE idx = $1";
+         const checkExistingFileResult = await pool.query(checkExistingFile, [board_idx]);
+ 
+         if(checkExistingFileResult.rows.length){
+             existingUrls = checkExistingFileResult.rows[0].urls.split(",");  
+         }
+         
+         //s3에서 파일 삭제 및 DB에서 upload 된 파일 삭제 
+         if(deleteFiles){
+             const deleteS3File = deleteFiles.split(",");
+             const deletePromises = deleteS3File.map(url => deleteFile(url));
+             await Promise.all(deletePromises);
+ 
+             const deleteDbUrls = deleteS3File.map(file => {
+                 const fullUrl = `https://kiminsu1996.s3.ap-northeast-2.amazonaws.com/${file}`;
+                 return pool.query(`DELETE FROM backend.upload WHERE urls = $1`, [fullUrl]);
+             });
+             await Promise.all(deleteDbUrls);
+             existingUrls = existingUrls.filter(url => !deleteS3File.includes(url)); // existingUrls 변수에 삭제한 파일을 제외한 것들을 저장 
+         }
+        
         //새로운 파일 업로드 
         if (req.files) {
             const uploadPromises = req.files.map(async file => {
@@ -265,14 +271,9 @@ postRouter.put('/', authenticateToken, uploadGuard.array('files', 5), async (req
         }
 
         if(!req.files){
-            newFileUrls = null;
+            existingUrls = null;
         }
 
-        //게시판 수정
-        conn = await pool.connect();
-        const updatePost = "UPDATE backend.board SET title = $1 , content = $2 WHERE board_idx = $3 AND idx = $4";
-        await pool.query(updatePost, [title, text, board_idx, userIdx]);
-    
         result.success = true;
         req.outputData = result.success;
 
@@ -308,19 +309,19 @@ postRouter.delete('/',authenticateToken,  async (req, res, next) =>{
         const checkFile = "SELECT urls FROM backend.upload WHERE idx = $1";
         const checkFileResult = await pool.query(checkFile, [board_idx]);
         const urls = checkFileResult.rows.map(row => row.urls);
-
-        //S3에서 파일 삭제 
-        const files = urls.map(url => deleteFile(url));
-        await Promise.all(files);
         
         //게시글 삭제
         conn = await pool.connect();
         const deleteBoard = await pool.query(`DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`, [board_idx, userIdx]);
-
-        if(deleteBoard.rowCount < 1){
+        
+        if(!deleteBoard.rowCount){
             throw new Error ("삭제할 게시글이 없습니다.");
         }
-
+        
+        //S3에서 파일 삭제 
+        const files = urls.map(url => deleteFile(url));
+        await Promise.all(files);
+        
         result.success = true;
         req.outputData = result.success;
         await logMiddleware(req, res, next);
