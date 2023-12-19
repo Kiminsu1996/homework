@@ -1,5 +1,5 @@
 const moment = require('moment-timezone');
-const { client } = require("../config/database/databases");
+const { client } = require('../config/database/databases');
 
 const logMiddleware = async (req, res, next) => {
     let conn = null;
@@ -9,16 +9,16 @@ const logMiddleware = async (req, res, next) => {
         const accountIdx = req.decode && req.decode.idx ? req.decode.idx : 'undefined';
 
         const logData = {
-            'ip': req.ip,
-            'accountIdx': accountIdx, 
-            'apiName': req.originalUrl,
-            'requestMethod': req.method,
-            'inputData': req.body,
-            'outputData': req.outputData,
-            'timestamp': moment().tz('Asia/Seoul').format()
+            ip: req.ip,
+            accountIdx: accountIdx,
+            apiName: req.originalUrl,
+            requestMethod: req.method,
+            inputData: req.body,
+            outputData: req.outputData,
+            timestamp: moment().tz('Asia/Seoul').format(),
         };
 
-        await conn.db("logging").collection("data").insertOne(logData);
+        await conn.db('logging').collection('data').insertOne(logData);
     } catch (error) {
         return console.log(error);
     } finally {
@@ -28,4 +28,4 @@ const logMiddleware = async (req, res, next) => {
     }
 };
 
-module.exports = {logMiddleware};
+module.exports = { logMiddleware };
