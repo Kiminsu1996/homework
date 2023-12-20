@@ -31,7 +31,7 @@ app.use((error, req, res, next) => {
     console.log(error);
     const statusCode = error.status || 500;
     res.status(statusCode).json({
-        //api를 받아 올 수 있다. 예외처리 중복코드, sql 문법오류 , DB서버 끊는거까지 가능하다......
+        //api를 받아 올 수 있다. 예외처리 중복코드, sql 문법오류 , DB서버 끊는거까지 가능하다.........
         success: false,
         message: error.message,
     });
