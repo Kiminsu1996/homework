@@ -26,8 +26,7 @@ postRouter.post('/', authenticateToken, uploadGuard.array('files', 5), async (re
         conn = await pool.connect();
 
         //게시글 작성
-        const insertBoardSql =
-            'INSERT INTO backend.board (idx, title, content) VALUES ($1, $2, $3) RETURNING board_idx';
+        const insertBoardSql = 'INSERT INTO backend.board (idx, title, content) VALUES ($1, $2, $3) RETURNING board_idx';
         const boardData = [userIdx, title, text];
         const boardResult = await pool.query(insertBoardSql, boardData);
         const boardIdx = boardResult.rows[0].board_idx; // 게시글의 idx를 가져옵니다.
@@ -326,10 +325,7 @@ postRouter.delete('/', authenticateToken, async (req, res, next) => {
 
         //게시글 삭제
         conn = await pool.connect();
-        const deleteBoard = await pool.query(`DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`, [
-            board_idx,
-            userIdx,
-        ]);
+        const deleteBoard = await pool.query(`DELETE FROM backend.board WHERE board_idx = $1 AND idx = $2`, [board_idx, userIdx]);
 
         if (!deleteBoard.rowCount) {
             throw new Error('삭제할 게시글이 없습니다.');
